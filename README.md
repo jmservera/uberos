@@ -6,6 +6,8 @@ UberOS delivers a complete, containerized ROS 2 workspace — physics simulator,
 browser code editor, terminals, and a canvas window manager — reachable from a
 standard web browser with no local install beyond Docker.
 
+![Screenshot of the UberOS window manager canvas with four panels: Simulator, Terminal, Code Editor, and ROS Status](docs/images/screenshot.png)
+
 ## Quick start
 
 ```bash
