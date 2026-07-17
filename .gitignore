@@ -8,3 +8,5 @@
 .squad/.cache/
 # Squad: SubSquad activation file (local to this machine)
 .squad-workstream
+# ignore hve tracking files
+.copilot-tracking/
