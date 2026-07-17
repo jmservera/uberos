@@ -23,6 +23,7 @@ volumes:
   ros-home:
   gazebo-home:
   editor-data:
+  x11-socket:
 
 services:
   discovery-server:
@@ -31,8 +32,10 @@ services:
     networks:
       - ros_net
     restart: unless-stopped
+    # Fast DDS discovery listens on UDP 11811, so a TCP probe never succeeds.
+    # Verify the discovery process is running instead.
     healthcheck:
-      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/11811' 2>/dev/null && echo ok || exit 1"]
+      test: ["CMD-SHELL", "pgrep -f 'fastdds discovery' >/dev/null || exit 1"]
       interval: 5s
       timeout: 3s
       retries: 10
@@ -62,8 +65,10 @@ services:
     restart: unless-stopped
     # rosbridge (9090) and ttyd (7681) are intentionally NOT published to the host.
     # They are reachable only through the proxy (INV-04, WP-13 security baseline).
+    # Use 127.0.0.1: `localhost` also resolves to ::1 (see /etc/hosts) but
+    # rosbridge only listens on IPv4, so an IPv6 probe is refused.
     healthcheck:
-      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/9090' 2>/dev/null && echo ok || exit 1"]
+      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/127.0.0.1/9090' 2>/dev/null && echo ok || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -88,6 +93,9 @@ services:
     volumes:
       - ./simulation:/simulation:ro
       - gazebo-home:/root/.gz
+      # Publish the X11 socket so the vnc sidecar can attach to display :99
+      # (the sidecar shares only the network namespace, not the filesystem).
+      - x11-socket:/tmp/.X11-unix
     networks:
       - ros_net
       - web_net
@@ -109,9 +117,12 @@ services:
     depends_on:
       simulator:
         condition: service_healthy
+    volumes:
+      # Read the simulator's X11 socket to attach x11vnc to display :99.
+      - x11-socket:/tmp/.X11-unix
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:6080/ >/dev/null || exit 1"]
+      test: ["CMD-SHELL", "curl -sf http://127.0.0.1:6080/ >/dev/null || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -130,7 +141,7 @@ services:
       - web_net
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/8443' 2>/dev/null && echo ok || exit 1"]
+      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/127.0.0.1/8443' 2>/dev/null && echo ok || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 6
@@ -145,7 +156,7 @@ services:
       - web_net
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "wget -q -O - http://localhost:3000/ >/dev/null || exit 1"]
+      test: ["CMD-SHELL", "wget -q -O - http://127.0.0.1:3000/ >/dev/null || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -172,7 +183,7 @@ services:
       - ros_net
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "wget -q -O - http://localhost:8080/healthz >/dev/null || exit 1"]
+      test: ["CMD-SHELL", "wget -q -O - http://127.0.0.1:8080/healthz >/dev/null || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5

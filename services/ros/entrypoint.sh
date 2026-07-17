@@ -4,11 +4,15 @@
 # ttyd (browser terminals) alongside rosbridge (browser <-> ROS graph).
 set -euo pipefail
 
+# ROS setup scripts reference unbound variables (e.g. AMENT_TRACE_SETUP_FILES),
+# so relax nounset while sourcing them, then restore it.
+set +u
 source "/opt/ros/${ROS_DISTRO}/setup.bash"
 if [ -f /ros_ws/install/setup.bash ]; then
   # shellcheck disable=SC1091
   source /ros_ws/install/setup.bash
 fi
+set -u
 
 # ttyd serves a writable bash PTY per WebSocket connection on :7681.
 # Each browser connection gets an independent shell (requirement F-05).

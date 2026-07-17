@@ -1,0 +1,16 @@
+{
+  "name": "uberos-acceptance",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "WP-15 acceptance tests: machine-verify success criteria S1-S6 against a running UberOS stack.",
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "smoke": "node smoke.mjs",
+    "report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.48.0"
+  }
+}
