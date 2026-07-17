@@ -1,0 +1,67 @@
+:root {
+  color-scheme: dark;
+  --uberos-bg: #1e1e2e;
+  --uberos-panel: #181825;
+  --uberos-accent: #89b4fa;
+  --uberos-text: #cdd6f4;
+  --uberos-muted: #6c7086;
+  --uberos-ok: #a6e3a1;
+  --uberos-warn: #f9e2af;
+  --uberos-err: #f38ba8;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  margin: 0;
+  height: 100%;
+  width: 100%;
+  background: var(--uberos-bg);
+  color: var(--uberos-text);
+  font-family: "Segoe UI", system-ui, sans-serif;
+}
+
+.panel-frame {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: #000;
+}
+
+.panel-body {
+  padding: 0.75rem;
+  height: 100%;
+  overflow: auto;
+  font-size: 0.85rem;
+}
+
+.status-dot {
+  display: inline-block;
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 50%;
+  margin-right: 0.4rem;
+}
+
+.status-dot.ok {
+  background: var(--uberos-ok);
+}
+
+.status-dot.warn {
+  background: var(--uberos-warn);
+}
+
+.status-dot.err {
+  background: var(--uberos-err);
+}
+
+.log-line {
+  font-family: "Cascadia Code", "Consolas", monospace;
+  white-space: pre-wrap;
+  margin: 0;
+  color: var(--uberos-muted);
+}

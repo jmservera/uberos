@@ -160,7 +160,7 @@ Not applicable for Init. No analytics or telemetry are in scope.
 ## 10. Risks & Mitigations
 | Risk ID | Description | Severity | Likelihood | Mitigation | Owner | Status |
 |---------|-------------|---------|-----------|-----------|-------|--------|
-| RISK-1 | Lyrical ecosystem gaps (rosbridge, ros-gz) | High | Medium | SPIKE-A P2/P4; source install or Jazzy | Neo | Open |
+| RISK-1 | Lyrical ecosystem gaps (rosbridge, ros-gz) | High | Medium | SPIKE-A passed 2026-07-17: rosbridge-suite 4.2.0, ros-gz 3.0.9 available; Jazzy fallback retained | Neo | Mitigated |
 | RISK-2 | Ogre2 software-rendering crash | High | Low | Mesa overrides; wait for Xvfb; Jazzy fallback | Neo | Open |
 | RISK-4 | Silent DDS discovery failure | Critical | High | Fast DDS discovery server (WP-5) | Neo | Open |
 | RISK-7 | ttyd architecture mismatch | High | Medium | Pin ttyd; `TARGETARCH` selection | Trinity | Open |
@@ -214,7 +214,7 @@ TBD.
 ## 14. Open Questions
 | Q ID | Question | Owner | Deadline | Status |
 |------|----------|-------|---------|--------|
-| U-D1 | ROS 2 distribution | jmservera / Neo | Before WP-0 | Resolved — Lyrical (pending SPIKE-A; Jazzy fallback) |
+| U-D1 | ROS 2 distribution | jmservera / Neo | Before WP-0 | Resolved — Lyrical (SPIKE-A passed; Jazzy fallback) |
 | U-D2 | Reverse proxy | jmservera / Trinity | Before WP-0 | Resolved — Nginx |
 | U-D3 | Terminal transport | jmservera / Switch | Before WP-2/WP-9 | Resolved — ttyd inside ROS container |
 | U-D4 | Frontend framework + window manager | jmservera / Switch | Before WP-9 | Resolved — Svelte + Golden Layout v2 |

@@ -1,0 +1,177 @@
+# UberOS - browser-accessible ROS development and simulation environment.
+# Single command: `docker compose up`. The proxy is the only host-published port.
+#
+# Service boundaries follow the research report (docs/specs/01-Init-research.md):
+#   discovery-server -> Fast DDS discovery (removes multicast dependency, RISK-4)
+#   ros              -> ROS 2 middleware + rosbridge (:9090) + ttyd (:7681)
+#   simulator        -> Gazebo + Xvfb (:99), software rendering by default
+#   vnc              -> x11vnc + noVNC sidecar sharing the simulator namespace
+#   editor           -> code-server (:8443) on the shared ROS workspace
+#   frontend         -> Svelte + Golden Layout SPA (:3000)
+#   proxy            -> Nginx single ingress (:${UBEROS_PORT})
+
+name: uberos
+
+networks:
+  ros_net:
+    driver: bridge
+  web_net:
+    driver: bridge
+
+volumes:
+  ros-workspace:
+  ros-home:
+  gazebo-home:
+  editor-data:
+
+services:
+  discovery-server:
+    image: ros:${ROS_DISTRO:-lyrical}-ros-base
+    command: fastdds discovery -i 0 -l 0.0.0.0 -p 11811
+    networks:
+      - ros_net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/11811' 2>/dev/null && echo ok || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+
+  ros:
+    build:
+      context: ./services/ros
+      args:
+        ROS_DISTRO: ${ROS_DISTRO:-lyrical}
+    depends_on:
+      discovery-server:
+        condition: service_healthy
+    environment:
+      ROS_DOMAIN_ID: ${ROS_DOMAIN_ID:-42}
+      RMW_IMPLEMENTATION: ${RMW_IMPLEMENTATION:-rmw_fastrtps_cpp}
+      ROS_DISCOVERY_SERVER: discovery-server:11811
+      FASTRTPS_DEFAULT_PROFILES_FILE: /etc/ros/dds_discovery.xml
+    volumes:
+      - ./workspace/src:/ros_ws/src
+      - ros-workspace:/ros_ws
+      - ros-home:/root/.ros
+    networks:
+      - ros_net
+      - web_net
+    stop_grace_period: 30s
+    restart: unless-stopped
+    # rosbridge (9090) and ttyd (7681) are intentionally NOT published to the host.
+    # They are reachable only through the proxy (INV-04, WP-13 security baseline).
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/9090' 2>/dev/null && echo ok || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  simulator:
+    build:
+      context: ./services/simulator
+      args:
+        GZ_RELEASE: ${GZ_RELEASE:-jetty}
+    depends_on:
+      discovery-server:
+        condition: service_healthy
+    environment:
+      DISPLAY: ":99"
+      ROS_DOMAIN_ID: ${ROS_DOMAIN_ID:-42}
+      RMW_IMPLEMENTATION: ${RMW_IMPLEMENTATION:-rmw_fastrtps_cpp}
+      ROS_DISCOVERY_SERVER: discovery-server:11811
+      LIBGL_ALWAYS_SOFTWARE: ${LIBGL_ALWAYS_SOFTWARE:-1}
+      MESA_GL_VERSION_OVERRIDE: ${MESA_GL_VERSION_OVERRIDE:-3.3}
+      MESA_GLSL_VERSION_OVERRIDE: ${MESA_GLSL_VERSION_OVERRIDE:-330}
+    volumes:
+      - ./simulation:/simulation:ro
+      - gazebo-home:/root/.gz
+    networks:
+      - ros_net
+      - web_net
+    stop_grace_period: 60s
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep Xvfb >/dev/null && pgrep -f 'gz sim' >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 25s
+
+  vnc:
+    build:
+      context: ./services/vnc
+    # Share the simulator's network namespace so x11vnc can reach display :99
+    # without publishing VNC to any network (research R4).
+    network_mode: "service:simulator"
+    depends_on:
+      simulator:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:6080/ >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  editor:
+    build:
+      context: ./services/editor
+    # The code-server image entrypoint already invokes the code-server binary,
+    # so these are argument flags only (not prefixed with `code-server`).
+    command: ["--bind-addr", "0.0.0.0:8443", "--auth", "none", "--disable-telemetry", "/ros_ws/src"]
+    volumes:
+      - ./workspace/src:/ros_ws/src
+      - editor-data:/home/coder/.local/share/code-server
+    networks:
+      - web_net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/8443' 2>/dev/null && echo ok || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 15s
+
+  frontend:
+    build:
+      context: ./services/frontend
+    networks:
+      - web_net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O - http://localhost:3000/ >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  proxy:
+    image: nginx:1.27-alpine
+    depends_on:
+      ros:
+        condition: service_healthy
+      vnc:
+        condition: service_healthy
+      editor:
+        condition: service_healthy
+      frontend:
+        condition: service_healthy
+    ports:
+      - "${UBEROS_PORT:-8080}:8080"
+    volumes:
+      - ./services/proxy/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./config/nginx:/etc/nginx/auth:ro
+    networks:
+      - web_net
+      - ros_net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O - http://localhost:8080/healthz >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s

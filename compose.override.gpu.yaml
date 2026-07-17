@@ -1,0 +1,22 @@
+# GPU acceleration overlay (opt-in, Linux + NVIDIA Container Toolkit).
+# Usage: docker compose -f compose.yaml -f compose.override.gpu.yaml up
+#
+# Uses the Compose V2 device-reservation syntax (NOT the deprecated
+# `runtime: nvidia`). Non-NVIDIA hosts should not load this overlay.
+# macOS Docker Desktop has no GPU passthrough (research: gpu-macos).
+
+services:
+  simulator:
+    environment:
+      # Disable software rendering so the NVIDIA GL stack is used.
+      LIBGL_ALWAYS_SOFTWARE: ""
+      NVIDIA_VISIBLE_DEVICES: all
+      NVIDIA_DRIVER_CAPABILITIES: all
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities:
+                - gpu

@@ -1,0 +1,9 @@
+# colcon default settings for the UberOS ROS workspace.
+# symlink-install lets Python edits take effect without a full rebuild.
+build:
+  symlink-install: true
+  event-handlers:
+    - console_direct+
+test:
+  event-handlers:
+    - console_direct+
