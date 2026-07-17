@@ -9,10 +9,12 @@ RUN apt-get update \
         x11vnc \
         novnc \
         websockify \
+        openbox \
         curl \
         procps \
     && rm -rf /var/lib/apt/lists/*
 
+COPY openbox-rc.xml /etc/openbox-rc.xml
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 

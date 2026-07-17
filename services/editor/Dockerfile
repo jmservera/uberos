@@ -12,5 +12,12 @@ RUN apt-get update \
 # Ensure the shared workspace mount point exists and is owned by the coder user.
 RUN mkdir -p /ros_ws/src && chown -R coder:coder /ros_ws
 
+# Pre-create the code-server state directory owned by coder so the named volume
+# mounted here inherits coder ownership. Otherwise the volume is root-owned and
+# code-server (running as uid 1000) cannot write its heartbeat/session state,
+# which breaks the workbench WebSocket connection (close code 1006).
+RUN mkdir -p /home/coder/.local/share/code-server \
+    && chown -R coder:coder /home/coder/.local
+
 USER coder
 EXPOSE 8443

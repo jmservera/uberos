@@ -1,6 +1,6 @@
 <script>
   import { onMount } from 'svelte';
-  import { GoldenLayout } from 'golden-layout';
+  import { GoldenLayout, LayoutConfig } from 'golden-layout';
   import 'golden-layout/dist/css/goldenlayout-base.css';
   import 'golden-layout/dist/css/themes/goldenlayout-dark-theme.css';
   import {
@@ -32,9 +32,26 @@
   function loadSavedLayout() {
     try {
       const raw = localStorage.getItem(LAYOUT_KEY);
-      return raw ? JSON.parse(raw) : null;
+      if (!raw) return null;
+      const resolved = JSON.parse(raw);
+      // A persisted layout with no panels is useless and would render a blank
+      // canvas; treat it as absent so the default layout is restored.
+      if (!resolved?.root?.content?.length) return null;
+      // saveLayout() returns a ResolvedLayoutConfig; loadLayout() expects a
+      // (non-resolved) LayoutConfig. Passing the resolved form straight back
+      // crashes Golden Layout ("trimStart is not a function") and wipes the
+      // canvas, so convert it first.
+      return LayoutConfig.fromResolved(resolved);
     } catch {
       return null;
+    }
+  }
+
+  function clearSavedLayout() {
+    try {
+      localStorage.removeItem(LAYOUT_KEY);
+    } catch {
+      /* ignore */
     }
   }
 
@@ -56,7 +73,14 @@
     }
 
     const saved = loadSavedLayout();
-    layout.loadLayout(saved ?? defaultLayout);
+    try {
+      layout.loadLayout(saved ?? defaultLayout);
+    } catch {
+      // A corrupt saved layout can throw during resolution; drop it and fall
+      // back to the default so the user always sees their panels.
+      clearSavedLayout();
+      layout.loadLayout(defaultLayout);
+    }
 
     // Persist layout changes so a refresh restores the canvas (spec §9).
     layout.on('stateChanged', () => saveLayout(layout));

@@ -17,16 +17,24 @@ for _ in $(seq 1 120); do
   sleep 0.5
 done
 
+# Run a lightweight window manager on the simulator's display. Without a WM the
+# Gazebo Qt window is never mapped/sized properly and noVNC shows a black
+# desktop with stray window fragments. Openbox maximizes and undecorates it so
+# the simulator fills the framebuffer (S4). Xvfb runs with -ac, so this sidecar
+# can manage :99 across the container boundary via the shared X socket.
+DISPLAY="${DISPLAY_NUM}" openbox --config-file /etc/openbox-rc.xml &
+
 # Export display :99 over VNC on localhost:5900 (no password: gated at the proxy).
 # -noshm: the sidecar has a separate IPC namespace from the simulator, so the
 # MIT-SHM extension cannot attach; read pixels over the X protocol instead.
+# No -ncache: client-side caching enlarges the framebuffer well beyond the real
+# screen, which noVNC renders as a small strip on a large black canvas.
 x11vnc \
   -display "${DISPLAY_NUM}" \
   -nopw \
   -listen localhost \
   -noshm \
   -xkb \
-  -ncache 10 \
   -rfbport 5900 \
   -forever \
   -shared \
