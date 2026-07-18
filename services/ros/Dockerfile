@@ -22,6 +22,7 @@ RUN apt-get update \
         ros-${ROS_DISTRO}-rosapi \
         ros-${ROS_DISTRO}-ros-gz \
         procps \
+        tmux \
         curl \
         wget \
         ca-certificates \
@@ -48,7 +49,8 @@ WORKDIR /ros_ws
 
 COPY config/dds_discovery.xml /etc/ros/dds_discovery.xml
 COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+COPY uberos-term.sh /usr/local/bin/uberos-term
+RUN chmod +x /entrypoint.sh /usr/local/bin/uberos-term
 
 ENV ROS_DOMAIN_ID=42
 ENV RMW_IMPLEMENTATION=rmw_fastrtps_cpp

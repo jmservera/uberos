@@ -70,8 +70,27 @@ export function buildSimulatorPanel(el) {
   el.appendChild(makeIframe(PANEL_DEFS.simulator.url));
 }
 
-export function buildTerminalPanel(el) {
-  el.appendChild(makeIframe(PANEL_DEFS.terminal.url));
+// Resolve a stable tmux session id for a terminal panel and persist it in the
+// Golden Layout component state. The id travels with the panel across docking,
+// saved layouts, and pop-outs, so the /terminal/?arg=<id> connection always
+// reattaches the same shell (preserving scrollback and running processes).
+function terminalSession(container) {
+  const existing = container?.initialState?.session;
+  if (existing) return existing;
+  const session = 't' + Math.random().toString(36).slice(2, 10);
+  try {
+    container?.setState?.({ ...(container.initialState ?? {}), session });
+  } catch {
+    /* setState may be unavailable in some contexts; the URL id still works. */
+  }
+  return session;
+}
+
+export function buildTerminalPanel(el, container) {
+  const session = terminalSession(container);
+  el.appendChild(
+    makeIframe(`${PANEL_DEFS.terminal.url}?arg=${encodeURIComponent(session)}`)
+  );
 }
 
 export function buildEditorPanel(el) {

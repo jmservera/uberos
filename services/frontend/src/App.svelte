@@ -111,6 +111,118 @@
     return found;
   }
 
+  // --- Golden Layout header buttons --------------------------------------
+  // Golden Layout offers no API for custom header buttons, so we inject our own
+  // into each stack's control strip (.lm_controls, the right-aligned cluster
+  // that also holds maximise/close). Putting them there keeps them clickable
+  // and clear of the tabs. Two buttons:
+  //   +  add a terminal beside the current one (terminal stacks only, BR-003)
+  //   ⇗  open the active panel in a new browser window (BR-002)
+  const ADD_BTN_CLASS = 'uberos-add-terminal';
+  const POP_BTN_CLASS = 'uberos-popout';
+  let injectScheduled = false;
+
+  function eachStack(fn) {
+    const seen = new Set();
+    forEachComponent((c) => {
+      const stack = c.parent;
+      if (stack && !seen.has(stack)) {
+        seen.add(stack);
+        fn(stack);
+      }
+    });
+  }
+
+  function makeHeaderButton(cls, glyph, label, onClick) {
+    const btn = document.createElement('button');
+    btn.className = `uberos-hdr-btn ${cls}`;
+    btn.type = 'button';
+    btn.title = label;
+    btn.setAttribute('aria-label', label);
+    btn.textContent = glyph;
+    // Stop mousedown so Golden Layout does not treat the press as a tab drag.
+    btn.addEventListener('mousedown', (e) => e.stopPropagation());
+    btn.addEventListener('click', onClick);
+    return btn;
+  }
+
+  function injectHeaderButtons() {
+    if (!layout?.rootItem) return;
+    eachStack((stack) => {
+      const header = stack.element?.querySelector(':scope > .lm_header');
+      const controls = header?.querySelector(':scope > .lm_controls');
+      if (!controls) return;
+      const items = stack.contentItems ?? [];
+      const hasTerminal = items.some((ci) => ci.componentType === 'terminal');
+      const canPopout = items.some((ci) => !!popoutUrl(ci.componentType));
+
+      if (hasTerminal && !controls.querySelector('.' + ADD_BTN_CLASS)) {
+        controls.appendChild(
+          makeHeaderButton(ADD_BTN_CLASS, '＋', 'New terminal', (e) => {
+            e.stopPropagation();
+            const live = (stack.contentItems ?? []).find(
+              (ci) => ci.componentType === 'terminal'
+            );
+            addTerminal(live);
+          })
+        );
+      }
+
+      if (canPopout && !controls.querySelector('.' + POP_BTN_CLASS)) {
+        controls.appendChild(
+          makeHeaderButton(POP_BTN_CLASS, '⇗', 'Open in new window', (e) => {
+            e.stopPropagation();
+            const active =
+              typeof stack.getActiveComponentItem === 'function'
+                ? stack.getActiveComponentItem()
+                : (stack.contentItems ?? [])[0];
+            openPanelWindow(panelWindowUrl(active));
+          })
+        );
+      }
+    });
+  }
+
+  // Golden Layout rebuilds headers on structural changes, wiping injected
+  // buttons. Re-inject on the next frame so the DOM has settled first.
+  function scheduleInject() {
+    if (injectScheduled) return;
+    injectScheduled = true;
+    requestAnimationFrame(() => {
+      injectScheduled = false;
+      injectHeaderButtons();
+    });
+  }
+
+  // Golden Layout's native pop-out (the header ⇗ icon) opens a fragile
+  // ?gl-window= child window that renders blank and loses its config on
+  // refresh. Disable it; our own ⇗ button opens the panel reliably (BR-002).
+  function withoutNativePopout(cfg) {
+    if (cfg) cfg.settings = { ...(cfg.settings ?? {}), showPopoutIcon: false };
+    return cfg;
+  }
+
+  // The live iframe URL carries the panel's current session (e.g. a terminal's
+  // ?arg=<tmux id>), so popping it out reconnects to the SAME shell and keeps
+  // its history. Fall back to the panel's base service URL for safety.
+  function panelWindowUrl(item) {
+    const frame = item?.element?.querySelector('iframe.panel-frame');
+    return frame?.src || (item && popoutUrl(item.componentType)) || null;
+  }
+
+  // Open a panel in a real, movable browser window (not a background tab). The
+  // width/height features make browsers spawn a separate window the user can
+  // drag to another monitor.
+  function openPanelWindow(url) {
+    if (!url) return;
+    const w = 1280;
+    const h = 800;
+    const left = Math.max(0, Math.round(((window.screen?.availWidth ?? 1600) - w) / 2));
+    const top = Math.max(0, Math.round(((window.screen?.availHeight ?? 900) - h) / 3));
+    const win = window.open(url, '_blank', `popup=yes,width=${w},height=${h},left=${left},top=${top}`);
+    if (win) win.opener = null;
+  }
+
   // --- Menu actions -------------------------------------------------------
   // Hide/show a singleton panel; reopening restores a working panel (BR-001/005).
   function togglePanel(type) {
@@ -126,9 +238,17 @@
 
   // Spawn a new independent terminal PTY (BR-003). Each iframe to /terminal/
   // opens its own shell; drag it to dock/undock, or pop it out (BR-004).
-  function addTerminal() {
+  // Focusing an existing terminal first makes Golden Layout dock the new tab
+  // into that terminal's stack (FocusedItem is GL's first add-location
+  // selector), so it appears next to the current one rather than at random.
+  function addTerminal(nearItem) {
+    const target = nearItem ?? firstComponent('terminal');
+    target?.focus?.();
     const n = (openCounts.terminal ?? 0) + 1;
-    layout.addComponent('terminal', undefined, `Terminal ${n}`);
+    // Give the terminal a stable tmux session id so it keeps its shell/history
+    // when popped out, docked, or reloaded (see terminalSession in panels.js).
+    const session = 't' + Math.random().toString(36).slice(2, 10);
+    layout.addComponent('terminal', { session }, `Terminal ${n}`);
     refreshOpenPanels();
     flash(`Added Terminal ${n}`);
     closeMenu();
@@ -138,15 +258,14 @@
   function applyPreset(key) {
     const preset = LAYOUTS[key];
     if (!preset) return;
-    layout.loadLayout(JSON.parse(JSON.stringify(preset)));
+    layout.loadLayout(withoutNativePopout(JSON.parse(JSON.stringify(preset))));
     refreshOpenPanels();
     closeMenu();
   }
 
   // Pop a panel out into its own browser window with live content (BR-002).
   function popout(type) {
-    const url = popoutUrl(type);
-    if (url) window.open(url, '_blank', 'noopener');
+    openPanelWindow(panelWindowUrl(firstComponent(type)) ?? popoutUrl(type));
     closeMenu();
   }
 
@@ -197,30 +316,42 @@
 
     for (const [type, build] of Object.entries(factories)) {
       layout.registerComponentFactoryFunction(type, (componentContainer) => {
-        build(componentContainer.element);
+        build(componentContainer.element, componentContainer);
       });
     }
 
-    const saved = loadSavedLayout();
-    try {
-      layout.loadLayout(saved ?? defaultLayout);
-    } catch {
-      // A corrupt saved layout can throw during resolution; drop it and fall
-      // back to the default so the user always sees their panels.
-      clearSavedLayout();
-      layout.loadLayout(defaultLayout);
+    // A popped-out panel loads this same app in a subwindow. Golden Layout
+    // auto-loads the popped component's config there, so we must NOT restore
+    // the saved/default layout (that would clobber the pop-out, BR-002) nor
+    // persist its state back over the main window (S5).
+    const isSub = layout.isSubWindow;
+    if (isSub) document.body.classList.add('uberos-subwindow');
+
+    if (!isSub) {
+      const saved = loadSavedLayout();
+      try {
+        layout.loadLayout(withoutNativePopout(saved ?? defaultLayout));
+      } catch {
+        // A corrupt saved layout can throw during resolution; drop it and fall
+        // back to the default so the user always sees their panels.
+        clearSavedLayout();
+        layout.loadLayout(withoutNativePopout(defaultLayout));
+      }
     }
     refreshOpenPanels();
+    scheduleInject();
 
     // Persist layout changes and keep the menu's open/closed state in sync.
     layout.on('stateChanged', () => {
-      saveLayout(layout);
+      if (!isSub) saveLayout(layout);
       refreshOpenPanels();
+      scheduleInject();
     });
 
     // Notify other windows when a panel pops out (multi-screen use, J3).
     layout.on('itemCreated', (item) => {
       channel?.postMessage({ type: 'panel-created', panel: item.target?.type });
+      scheduleInject();
     });
 
     // Discover whether auth is enabled (controls Logout visibility) and the

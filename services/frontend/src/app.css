@@ -41,6 +41,43 @@ body,
   pointer-events: none;
 }
 
+/* Injected header buttons — a "+" (new terminal, BR-003) and a "⇗" (open the
+   active panel in a new window, BR-002). Golden Layout has no custom-header-
+   button API, so App.svelte injects these into each stack's .lm_controls strip
+   (a flexbox). order:-1 keeps them left of Golden Layout's own maximise/close
+   controls. Styling lives here because the buttons are created outside Svelte's
+   component scope. */
+.lm_header .lm_controls .uberos-hdr-btn {
+  order: -1;
+  height: 18px;
+  min-width: 18px;
+  padding: 0 3px;
+  background: transparent;
+  border: 0;
+  color: var(--uberos-text);
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 18px;
+  opacity: 0.7;
+}
+
+.lm_header .lm_controls .uberos-hdr-btn:hover {
+  color: var(--uberos-accent);
+  opacity: 1;
+}
+
+/* Golden Layout's native pop-out control opens a broken ?gl-window= window; we
+   replace it with our own "⇗" button, so hide the native one. */
+.lm_header .lm_popout {
+  display: none;
+}
+
+/* A popped-out panel renders this same app in a subwindow; hide the menu bar
+   there so the detached panel fills the window (BR-002). */
+body.uberos-subwindow .uberos-titlebar {
+  display: none;
+}
+
 .panel-body {
   padding: 0.75rem;
   height: 100%;
