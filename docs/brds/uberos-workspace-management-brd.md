@@ -1,12 +1,12 @@
 ---
-title: UberOS Workspace Management and Controls BRD
+title: UbeROS Workspace Management and Controls BRD
 description: Business requirements for panel recovery, terminal session management, an operational system menu, optional authentication, and hardware/streaming research spikes.
 author: jmservera
 ms.date: 07/18/2026
 ms.topic: concept
 ---
 
-# UberOS Workspace Management and Controls BRD
+# UbeROS Workspace Management and Controls BRD
 
 Version 0.1.0 | Status Draft | Owner jmservera | Related PRD [uberos-init](../prds/uberos-init.md)
 ## Progress Tracker
@@ -22,7 +22,7 @@ Version 0.1.0 | Status Draft | Owner jmservera | Related PRD [uberos-init](../pr
 
 ## 1. Business Context and Background
 
-UberOS delivers a browser-based ROS development environment through a Golden Layout
+UbeROS delivers a browser-based ROS development environment through a Golden Layout
 canvas of dockable panels (Simulator/noVNC, Terminal, Code Editor, ROS Status) served
 behind a single Nginx reverse proxy. The Init milestone is functional: the full stack
 launches with `docker compose up` and panels support drag, resize, minimize, tabs, and
@@ -43,7 +43,7 @@ controls improvement, plus two research spikes, while preserving the Init constr
 
 ### Problem Statement
 
-Operators cannot reliably manage their UberOS workspace: they lose panels with no recovery
+Operators cannot reliably manage their UbeROS workspace: they lose panels with no recovery
 path, cannot use pop-out windows effectively, cannot freely create and arrange terminals,
 and have no central place to control layout, service health, or session/authentication.
 These gaps erode trust in the environment and slow the develop-build-test loop.

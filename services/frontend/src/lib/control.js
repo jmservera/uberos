@@ -1,4 +1,4 @@
-// Client for the UberOS control plane (proxied at /control/). Backs the system
+// Client for the UbeROS control plane (proxied at /control/). Backs the system
 // menu's service-reset and auth-aware Logout actions (BR-007, BR-008). All calls
 // are same-origin through the single proxy, so cached basic-auth credentials (if
 // any) ride along automatically.

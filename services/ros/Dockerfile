@@ -1,4 +1,4 @@
-# UberOS ROS 2 core container.
+# UbeROS ROS 2 core container.
 # Provides ROS middleware, colcon toolchain, rosbridge (browser <-> ROS graph),
 # and ttyd (browser terminals). See WP-2 in docs/specs/01-Init-research.md.
 #

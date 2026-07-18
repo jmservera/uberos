@@ -1,4 +1,4 @@
-# UberOS control service — the operational control plane behind /control/.
+# UbeROS control service — the operational control plane behind /control/.
 # Mounts the Docker socket to restart individual services (BR-007). Kept tiny
 # and dependency-free: it talks to the Docker Engine API over the unix socket
 # using only the Node standard library.

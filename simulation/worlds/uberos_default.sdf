@@ -1,6 +1,6 @@
 <?xml version="1.0" ?>
 <!--
-  UberOS default simulation world.
+  UbeROS default simulation world.
 
   Uses only Gazebo built-in primitive shapes (ground plane, sun, and a box) so
   it needs no Fuel downloads and carries no model-license review during Init

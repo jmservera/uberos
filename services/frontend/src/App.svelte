@@ -265,7 +265,7 @@
 
 <div class="uberos-shell">
   <header class="uberos-titlebar">
-    <span class="brand">UberOS</span>
+    <span class="brand">UbeROS</span>
     <span class="tagline">ROS in your browser</span>
 
     <nav class="uberos-menubar" aria-label="Workspace menu">

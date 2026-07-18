@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# UberOS ROS container entrypoint.
+# UbeROS ROS container entrypoint.
 # Sources the ROS environment and the workspace overlay (if built), then starts
 # ttyd (browser terminals) alongside rosbridge (browser <-> ROS graph).
 set -euo pipefail

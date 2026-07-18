@@ -185,7 +185,7 @@ through device plugins:
 | `GPU` | Intel iGPU/dGPU via the Level Zero / OpenCL backend |
 | `NPU` | Intel Neural Processing Unit (AI Boost on newer Core Ultra) |
 
-**How it relates to UberOS — and what it is not.** OpenVINO accelerates
+**How it relates to UbeROS — and what it is not.** OpenVINO accelerates
 *inference*, not *graphics*. Gazebo's rendering goes through OpenGL/Mesa; nothing
 in the simulator's render path calls OpenVINO. The natural home for OpenVINO in
 this project is a **future ROS perception/AI layer** — for example, running an

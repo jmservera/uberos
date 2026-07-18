@@ -14,7 +14,7 @@ if [ "$auth" = "basic" ]; then
     echo "uberos-auth: generate one with 'htpasswd -c config/nginx/.htpasswd <user>'." >&2
   fi
   cat > /etc/nginx/uberos/auth.conf <<'EOF'
-auth_basic           "UberOS";
+auth_basic           "UbeROS";
 auth_basic_user_file /etc/nginx/auth/.htpasswd;
 EOF
   echo "uberos-auth: basic auth ENABLED."

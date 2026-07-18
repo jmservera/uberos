@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# UberOS simulator entrypoint.
+# UbeROS simulator entrypoint.
 # Starts a virtual framebuffer, waits for it to be ready, then launches Gazebo
 # rendering into display :99. A GUI is required for success criterion S4, so
 # --headless-rendering is intentionally NOT used (research assumption A-5).

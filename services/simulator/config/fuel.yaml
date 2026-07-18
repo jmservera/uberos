@@ -1,4 +1,4 @@
-# Gazebo Fuel configuration for UberOS Init.
+# Gazebo Fuel configuration for UbeROS Init.
 # Automatic online model downloads are disabled: the Init world uses only
 # built-in Gazebo primitive shapes (Apache 2.0), which avoids Fuel model
 # licensing review during Init (research: fuel-license, OOS-05).

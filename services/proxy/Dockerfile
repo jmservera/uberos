@@ -1,4 +1,4 @@
-# UberOS reverse proxy image. Extends the stock nginx with a startup script that
+# UbeROS reverse proxy image. Extends the stock nginx with a startup script that
 # renders the optional auth include from UBEROS_AUTH (BR-010). The nginx image
 # runs every executable in /docker-entrypoint.d/ before starting nginx, so no
 # custom entrypoint is needed.

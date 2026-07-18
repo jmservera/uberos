@@ -11,17 +11,17 @@
 # ignore hve tracking files
 .copilot-tracking/
 
-# UberOS: local secrets and auth material (never commit)
+# UbeROS: local secrets and auth material (never commit)
 config/nginx/.htpasswd
 services/**/.env.local
 *.local.env
 
-# UberOS: frontend build artifacts and dependencies
+# UbeROS: frontend build artifacts and dependencies
 services/frontend/node_modules/
 services/frontend/dist/
 services/frontend/.vite/
 
-# UberOS: ROS workspace build outputs (regenerable; kept in named volumes)
+# UbeROS: ROS workspace build outputs (regenerable; kept in named volumes)
 workspace/build/
 workspace/install/
 workspace/log/

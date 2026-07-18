@@ -1,4 +1,4 @@
-# UberOS frontend SPA (Svelte + Golden Layout v2).
+# UbeROS frontend SPA (Svelte + Golden Layout v2).
 # Multi-stage build: Vite compiles the app, then nginx serves the static output
 # on :3000. See WP-9 in docs/specs/01-Init-research.md.
 

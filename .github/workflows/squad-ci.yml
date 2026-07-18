@@ -1,5 +1,5 @@
 name: Squad CI
-# UberOS: validates and builds the Docker Compose stack, then smoke-tests ROS.
+# UbeROS: validates and builds the Docker Compose stack, then smoke-tests ROS.
 
 on:
   pull_request:

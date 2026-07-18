@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# UberOS VNC sidecar entrypoint.
+# UbeROS VNC sidecar entrypoint.
 # Runs in the simulator's network namespace and attaches to its X display :99.
 # x11vnc exports the display on :5900; websockify serves noVNC and bridges the
 # browser WebSocket to VNC on :6080 (reached via the proxy at /novnc/).

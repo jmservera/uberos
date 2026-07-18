@@ -1,4 +1,4 @@
-# UberOS noVNC + VNC sidecar.
+# UbeROS noVNC + VNC sidecar.
 # Shares the simulator's network namespace (compose network_mode: service:simulator)
 # so x11vnc can attach to display :99 and websockify can serve noVNC to the
 # proxy at :6080, without publishing VNC to any network. See WP-4.

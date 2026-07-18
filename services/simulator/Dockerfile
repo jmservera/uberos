@@ -1,4 +1,4 @@
-# UberOS Gazebo simulator container.
+# UbeROS Gazebo simulator container.
 # Runs Gazebo headlessly against a virtual framebuffer (Xvfb :99) with software
 # rendering by default. The vnc sidecar streams display :99 to the browser.
 # See WP-3 in docs/specs/01-Init-research.md.

@@ -1,4 +1,4 @@
-# UberOS — Project Brief
+# UbeROS — Project Brief
 
 > A browser-accessible ROS development and simulation environment on Docker Compose.
 

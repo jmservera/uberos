@@ -1,4 +1,4 @@
-// UberOS control service — the workspace's operational control plane.
+// UbeROS control service — the workspace's operational control plane.
 //
 // Exposes a tiny, strictly-scoped HTTP API (behind the single Nginx proxy at
 // /control/) that lets the frontend system menu:

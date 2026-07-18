@@ -1,4 +1,4 @@
-# UberOS Init Research and Implementation Report
+# UbeROS Init Research and Implementation Report
 
 - **Repository:** `jmservera/uberos`
 - **Research snapshot:** commit `3d2d4629352fdea8acba94c4fe40a2a7808bd21f`
@@ -31,7 +31,7 @@
 
 ## Executive Summary
 
-UberOS was a Day-0 project at the researched commit: the canonical spec was the only implementation-bearing artifact, and no containers, frontend, ROS packages, tests, or real CI commands existed.[^gap][^test-audit] All six Initial Success Criteria (S1–S6) therefore remained unmet.
+UbeROS was a Day-0 project at the researched commit: the canonical spec was the only implementation-bearing artifact, and no containers, frontend, ROS packages, tests, or real CI commands existed.[^gap][^test-audit] All six Initial Success Criteria (S1–S6) therefore remained unmet.
 
 Research produced recommended resolutions for all ten research questions in spec §8, but four product choices still require confirmation before implementation: the ROS distribution, reverse proxy, terminal transport, and frontend framework.[^spec-r]
 
@@ -64,7 +64,7 @@ C-09 Simulation world override (leave blank = built-in shapes): __________
 ### U-D1 — ROS 2 Distribution
 
 - **Blocking horizon:** Before WP-0 repository scaffolding and the first ROS Dockerfile.
-- **Question:** Which ROS 2 distribution should UberOS use as its primary baseline?
+- **Question:** Which ROS 2 distribution should UbeROS use as its primary baseline?
 - **Context:** The user-supplied Lyrical Luth page signals possible intent to target Lyrical. Research found an active Lyrical base image and a support horizon of approximately May 2031, but its ecosystem package coverage remained unverified at the research date.[^lyrical-base][^ros-eol]
 - **Owner:** @juanserv_microsoft for the product decision; Neo for technical verification.
 
@@ -1219,7 +1219,7 @@ server {
 
   location /ros {
     # Enable before non-localhost exposure:
-    # auth_basic "UberOS";
+    # auth_basic "UbeROS";
     # auth_basic_user_file /etc/nginx/.htpasswd;
 
     proxy_pass http://rosbridge/;
@@ -1667,7 +1667,7 @@ The spec criteria need the following sharpenings for automation.[^test-audit]
 | <https://docs.docker.com/compose/how-tos/networking/> | Compose networking and namespace behavior | Verified |
 | <https://docs.ros.org/en/jazzy/Tutorials/Advanced/Improved-Dynamic-Discovery.html> | ROS 2 DDS discovery configuration | Verified |
 
-[spec-url]: https://github.com/jmservera/uberos/blob/3d2d4629352fdea8acba94c4fe40a2a7808bd21f/docs/specs/01-Init.md "UberOS spec 01-Init.md at 3d2d4629"
+[spec-url]: https://github.com/jmservera/uberos/blob/3d2d4629352fdea8acba94c4fe40a2a7808bd21f/docs/specs/01-Init.md "UbeROS spec 01-Init.md at 3d2d4629"
 
 [^spec-url]: Canonical spec: <https://github.com/jmservera/uberos/blob/3d2d4629352fdea8acba94c4fe40a2a7808bd21f/docs/specs/01-Init.md>. Spec blob `b34760996abe7a4e61a4ef9d9db15e6eecb4e6ac`; repository commit `3d2d4629352fdea8acba94c4fe40a2a7808bd21f`.
 
@@ -1719,7 +1719,7 @@ The spec criteria need the following sharpenings for automation.[^test-audit]
 
 [^gpu-compose]: Compose V2 GPU configuration uses `deploy.resources.reservations.devices`, replacing deprecated `runtime: nvidia`. Compose platform research record `a6cf09` notes that non-GPU hosts ignore the optional reservation.
 
-[^compose-plat]: Compose platform research record `a6cf09:L552,L570`: host networking is not portable to Docker Desktop on Windows and macOS, and no UberOS service requires `privileged: true`.
+[^compose-plat]: Compose platform research record `a6cf09:L552,L570`: host networking is not portable to Docker Desktop on Windows and macOS, and no UbeROS service requires `privileged: true`.
 
 [^compose-startup]: Compose startup-order guidance: <https://docs.docker.com/compose/how-tos/startup-order/>. `condition: service_healthy` waits for a dependency’s health check; `restart: true` under `depends_on` restarts dependents when a dependency restarts.
 

@@ -7,7 +7,7 @@
 
 ## Context
 
-UberOS needs a ROS 2 baseline distribution. The candidates are Lyrical Luth
+UbeROS needs a ROS 2 baseline distribution. The candidates are Lyrical Luth
 (Ubuntu 26.04, Gazebo Jetty, support to ~May 2031), Jazzy Jalisco (Ubuntu 24.04,
 Gazebo Harmonic, proven ecosystem to ~May 2029), and Humble (nearing EOL).
 Lyrical offers the longest runway but its ecosystem package coverage

@@ -1,4 +1,4 @@
-// Playwright configuration for the UberOS WP-15 acceptance suite.
+// Playwright configuration for the UbeROS WP-15 acceptance suite.
 // The stack must already be running (`docker compose up -d`) before these tests
 // execute. Tests target the single proxy ingress at UBEROS_PORT (default 8080).
 import { defineConfig, devices } from '@playwright/test';

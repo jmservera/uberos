@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# UberOS Layer-1 curl smoke test (WP-15).
+# UbeROS Layer-1 curl smoke test (WP-15).
 # Verifies the single-ingress proxy routes to every backend and that S1 health
 # holds. Intended for CI and quick local checks; the browser criteria (S2-S6)
 # are covered by the Playwright suite in ./acceptance.

@@ -1,6 +1,6 @@
 <!-- markdownlint-disable-file -->
 <!-- markdown-table-prettify-ignore-start -->
-# UberOS - Product Requirements Document (PRD)
+# UbeROS - Product Requirements Document (PRD)
 Version 0.2.0 | Status Draft | Owner jmservera | Team Squad (Morpheus, Neo, Trinity, Switch, Tank) | Target Init Milestone (no fixed date) | Lifecycle Research → Planning
 
 ## Progress Tracker
@@ -125,7 +125,7 @@ Canvas-style window manager with drag, resize, minimize, tabs, and pop-out. Firs
 
 ### Feature Hierarchy (Optional)
 ```plain
-UberOS
+UbeROS
 ├── Compose stack (proxy, ros, simulator, vnc, editor, frontend, discovery-server)
 ├── Browser canvas (window manager + four panels)
 ├── Persistence (named volumes + bind-mounted workspace/src)

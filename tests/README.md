@@ -1,5 +1,5 @@
 <!-- markdownlint-disable-file -->
-# UberOS Acceptance Tests (WP-15)
+# UbeROS Acceptance Tests (WP-15)
 
 Machine-verification of the six Initial Success Criteria (S1–S6) from
 [`docs/specs/01-Init.md`](../docs/specs/01-Init.md) and the workspace-management

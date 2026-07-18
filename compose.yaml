@@ -1,4 +1,4 @@
-# UberOS - browser-accessible ROS development and simulation environment.
+# UbeROS - browser-accessible ROS development and simulation environment.
 # Single command: `docker compose up`. The proxy is the only host-published port.
 #
 # Service boundaries follow the research report (docs/specs/01-Init-research.md):
