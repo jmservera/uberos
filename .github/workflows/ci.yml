@@ -63,14 +63,14 @@ jobs:
           npm install --no-save stylelint@16 stylelint-config-standard@36 > /dev/null 2>&1
           # stylelint@16's --config expects a file path (not inline JSON), and it
           # resolves `extends` relative to the config file, so write it next to
-          # node_modules. selector-class-pattern is relaxed for third-party
-          # Golden Layout classes (.lm_*); the empty-line/font-quote rules are
-          # stylistic and intentionally not enforced on the existing CSS.
+          # node_modules. selector-class-pattern keeps kebab-case for project
+          # classes but exempts third-party Golden Layout classes (.lm_*); the
+          # empty-line/font-quote rules are stylistic and not enforced here.
           cat > stylelint.ci.json <<'EOF'
           {
             "extends": "stylelint-config-standard",
             "rules": {
-              "selector-class-pattern": null,
+              "selector-class-pattern": ["^([a-z][a-z0-9]*)(-[a-z0-9]+)*$|^lm_", { "message": "Expected class selector to be kebab-case (Golden Layout lm_* classes exempt)" }],
               "custom-property-empty-line-before": null,
               "font-family-name-quotes": null
             }
