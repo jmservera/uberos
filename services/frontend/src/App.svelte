@@ -290,13 +290,29 @@
   }
 
   onMount(() => {
-    layout = new GoldenLayout(container);
-
-    for (const [type, build] of Object.entries(factories)) {
-      layout.registerComponentFactoryFunction(type, (componentContainer) => {
-        build(componentContainer.element, componentContainer);
-      });
-    }
+    // Golden Layout wipes document.body in a sub-window UNLESS the constructor
+    // is "determinate" — i.e. a bindComponentEventHandler is supplied. Without
+    // it, GL flags the constructor indeterminate, defers init by 7ms, and then
+    // runs clearHtmlAndAdjustStylesForSubWindow() which does
+    // `document.body.innerHTML = ''`. That destroys the Svelte-rendered DOM,
+    // including the `bind:this={container}` element, so popped-out windows come
+    // up BLANK. Passing bind/unbind handlers makes init run synchronously and
+    // SKIPS the body wipe, preserving the Svelte-managed DOM. GL still sets
+    // window.__glInstance = this in the sub-window, so the parent's dock-back /
+    // popInOnClose behaviour keeps working. We build panels from the same
+    // `factories` map the old registerComponentFactoryFunction loop used.
+    layout = new GoldenLayout(
+      container,
+      (componentContainer, itemConfig) => {
+        const build = factories[itemConfig.componentType];
+        if (build) build(componentContainer.element, componentContainer);
+        return { component: undefined, virtual: false };
+      },
+      () => {
+        // No explicit teardown needed: GL removes the container element's DOM
+        // when the component is unbound (panel closed / popped out).
+      }
+    );
 
     // A popped-out panel loads this same app in a subwindow. Golden Layout
     // auto-loads the popped component's config there, so we must NOT restore
