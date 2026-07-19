@@ -21,6 +21,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install hadolint
+        run: |
+          curl -sL -o /usr/local/bin/hadolint \
+            https://github.com/hadolint/hadolint/releases/download/v2.12.0/hadolint-Linux-x86_64
+          chmod +x /usr/local/bin/hadolint
+
       - name: Lint Dockerfiles
         run: |
           # DL3008 (pin versions) and DL3013 (pip pin) are noisy for ROS base
@@ -28,8 +34,7 @@ jobs:
           fail=0
           for df in services/*/Dockerfile; do
             echo "== $df =="
-            if ! docker run --rm -i hadolint/hadolint:v2.14.0 \
-              --ignore DL3008 --ignore DL3013 - < "$df"; then
+            if ! hadolint --ignore DL3008 --ignore DL3013 "$df"; then
               fail=1
             fi
           done
