@@ -60,7 +60,7 @@ jobs:
       - name: Lint JavaScript (ESLint)
         run: |
           npm init -y > /dev/null 2>&1
-          npm install --no-save eslint@8 @eslint/js@8 > /dev/null 2>&1
+          npm install --no-save eslint@8 > /dev/null 2>&1
           npx eslint --no-eslintrc \
             --env browser,node,es2022 \
             --parser-options=ecmaVersion:2022,sourceType:module \
