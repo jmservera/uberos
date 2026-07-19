@@ -60,13 +60,13 @@ jobs:
 
       - name: Wait for healthy services
         run: |
-timeout 180 bash -c '
-  set -euo pipefail
-  while docker compose ps --format "{{.Service}} {{.State}} {{.Health}}" \
-    | grep -Eq "exited|dead|restarting|starting|unhealthy"; do
-    sleep 5
-  done
-'
+          timeout 180 bash -c '
+            set -euo pipefail
+            while docker compose ps --format "{{.Service}} {{.State}} {{.Health}}" \
+              | grep -Eq "exited|dead|restarting|starting|unhealthy"; do
+              sleep 5
+            done
+          '
 
       # ── Smoke tests ──────────────────────────────────────────────────
       - name: Smoke test — service health + proxy routing
