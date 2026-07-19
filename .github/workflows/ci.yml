@@ -27,7 +27,7 @@ jobs:
           fail=0
           for df in services/*/Dockerfile; do
             echo "== $df =="
-            if ! docker run --rm -i hadolint/hadolint hadolint \
+            if ! docker run --rm -i hadolint/hadolint:v2.14.0 hadolint \
               --ignore DL3008 --ignore DL3013 - < "$df"; then
               fail=1
             fi
@@ -40,6 +40,9 @@ jobs:
     needs: lint
     steps:
       - uses: actions/checkout@v4
+
+      - name: Validate compose config
+        run: docker compose config --quiet
 
       - name: Build images
         run: docker compose build
