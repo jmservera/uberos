@@ -23,9 +23,13 @@ jobs:
 
       - name: Install hadolint
         run: |
-          curl -sL -o /usr/local/bin/hadolint \
+          curl -sL -o /tmp/hadolint \
             https://github.com/hadolint/hadolint/releases/download/v2.12.0/hadolint-Linux-x86_64
-          chmod +x /usr/local/bin/hadolint
+          EXPECTED=$(curl -sL \
+            https://github.com/hadolint/hadolint/releases/download/v2.12.0/hadolint-Linux-x86_64.sha256 \
+            | awk '{print $1}')
+          echo "$EXPECTED  /tmp/hadolint" | sha256sum -c -
+          sudo install -m 0755 /tmp/hadolint /usr/local/bin/hadolint
 
       - name: Lint Dockerfiles
         run: |
