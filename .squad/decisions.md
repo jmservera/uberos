@@ -246,7 +246,16 @@ at full size, no duplicates.
 timeout, package.json 404) is unrelated to dock-back; not investigated. Consider
 adding s5b to the default acceptance run if pop-out is a release-gated contract.
 
-### 2026-07-19: Root-fix embedded Golden Layout sizing — remove custom dock-back net
+### 2026-07-19: Root-fix embedded Golden Layout sizing — remove custom dock-back net — SUPERSEDED
+
+> ⚠️ **SUPERSEDED (2026-07-20)** by *"FINAL: native pop-in button dock-back
+> (popInOnClose:false + checkAddDefaultPopinButton)"* below. The RWCA-only "root fix"
+> correctly fixed embedded sizing but restored `popInOnClose: true`, which reintroduced
+> the ACTUAL user-facing defect: GL's native dock-back is bound to the popout's
+> `beforeunload`, which real Chrome does not fire for passive panels (Simulator, ROS
+> Status) that never receive a user gesture — so those panels stayed closed. RWCA
+> (`resizeWithContainerAutomatically = true`) and the determinate constructor are KEPT;
+> `popInOnClose` is turned back OFF in the final decision. Retained for root-cause history.
 
 **By:** Switch (Frontend Engineer), requested by jmservera
 **Scope:** `services/frontend/src/App.svelte` (branch `squad/theme-a-native-popout`)
@@ -295,6 +304,83 @@ Automated gating is unreliable for this symptom — the integrated VS Code brows
 `window.open`, and headless Chromium masks the stuck-until-resize symptom (Tank's
 earlier s5b PASS was a false-positive on the broken build). Do not claim it works until
 Edge confirms.
+
+### 2026-07-20: Superseded intermediate dock-back attempts (activation-net + custom Dock button)
+
+> ⚠️ **SUPERSEDED (2026-07-20)** by *"FINAL: native pop-in button dock-back"* below.
+> Recorded together for history — both were interim steps between proving the root cause
+> and shipping the final native-button solution.
+
+**By:** Switch (Frontend Engineer), requested by jmservera
+**Scope:** services/frontend/src/App.svelte, services/frontend/src/app.css (branch `squad/theme-a-native-popout`)
+
+1. **`window.closed` polling net (from switch-popin-activation-rootcause-fix).**
+   Kept `popInOnClose: true` and added an activation-independent safety net: on
+   `windowOpened`, capture the popped component config + child window handle, poll
+   `window.closed`, and on close wait 80ms then re-dock via `layout.addComponent()` only
+   if the component was still absent. Idempotent (Terminal/Editor already docked by
+   native popIn were skipped; terminals matched on tmux `session`). Also removed the
+   temporary `[UBEROS-DIAG]` instrumentation (global error/rejection listeners,
+   `diagBeacon`/`diagTree`, `/__diag` beacons). **Why superseded:** polling + timers were
+   more moving parts than needed; replaced by a user-clicked control that uses GL's own
+   `popIn` event path.
+
+2. **Custom "⭯ Dock" button (from switch-dock-button).** Set `popInOnClose: false` and
+   added a hand-rolled `.uberos-dock-btn` element (created in onMount when
+   `layout.isSubWindow`) whose click called `layout.emit('popIn')`; the parent
+   BrowserPopout listens for `popIn` and re-docks + closes the popout. Gesture-independent
+   and reliable for ALL panels; removed the dead polling net. **Why superseded:** GL
+   already ships this exact control — no need to hand-roll the button + CSS. Replaced by
+   `checkAddDefaultPopinButton()`.
+
+### 2026-07-20: FINAL — native pop-in button dock-back (popInOnClose:false + checkAddDefaultPopinButton)
+
+**By:** Switch (Frontend Engineer) + Tank (Integration & Test Engineer), requested by jmservera (repo owner)
+**Scope:** services/frontend/src/App.svelte, services/frontend/src/app.css, tests/acceptance/s5b-popout-dockback.spec.js
+**Branch:** squad/theme-a-native-popout
+**Supersedes:** the entire dock-back chain above — the addComponent net, the RWCA-only
+"root fix", the `window.closed` polling net, and the custom Dock button are ALL superseded
+by this decision.
+
+**Confirmed root cause (proven via live beacons from the user's real Chrome):** Golden
+Layout's automatic dock-back is bound to the popout window's `beforeunload`, which real
+Chrome does NOT fire reliably for passive panels (Simulator, ROS Status) — they never
+receive a user gesture / sticky activation, so `beforeunload` never fires, GL's `popIn()`
+is never called, and they stay closed. Terminal/Editor worked only because their popout
+*did* receive a gesture so their `beforeunload` fired. Never reproducible in Playwright
+because automation and `window.close()` bypass the activation gate. Diagnostic `[UBEROS-DIAG]`
+beacons routed through the nginx access logs were how the root cause was proven: on
+Terminal close the beacons logged `popIn-start`→`popIn-ok`; on Simulator close they logged
+`windowClosed` with NO `popIn-start`.
+
+**Final fix (user-approved; net code REMOVED):** Abandon all auto-dock-back-on-close
+attempts. Set `settings.popInOnClose: false` in `withNativePopout` and, in the sub-window
+branch of onMount, call Golden Layout's public `layout.checkAddDefaultPopinButton()`. With
+`popInOnClose:false` this creates GL's NATIVE pop-in control
+(`<div class="lm_popin">…`), appends it to `document.body`, and wires its click to
+`emit('popIn')` — the reliable, `beforeunload`-independent dock-back path (parent
+BrowserPopout listens for `popIn` on the child's `__glInstance`, re-docks the panel into
+the MAIN canvas, and closes the popout). This works for ALL panels including the passive
+ones. GL normally adds this button from `clearHtmlAndAdjustStylesForSubWindow()`, which the
+determinate constructor deliberately skips, so we call it ourselves. Closing the popout via
+the OS "X" intentionally leaves the panel closed (reopen from the Panels menu).
+
+**Kept intact:** determinate GL constructor (bind/unbind handlers),
+`resizeWithContainerAutomatically = true` (RWCA), sub-window header omission
+(`{#if !isSubWindow}`), and sub-window `document.title`.
+**Removed:** the earlier `windowClosed` addComponent net, the `window.closed` polling net,
+the custom `.uberos-dock-btn` button + its app.css rules, and all `[UBEROS-DIAG]`
+instrumentation.
+
+**Validation (Tank, s5b rewritten for the button model):** `tests/acceptance/s5b-popout-dockback.spec.js`
+now, per panel, pops out via `.lm_popout`, asserts `.lm_popin` visible in the popup, clicks
+it, and asserts the popup closes + the panel is back in the main canvas at non-zero size
+with no duplicate; plus a test that OS-close (`window.close()`) leaves the panel closed.
+`npx playwright test s5b-popout-dockback` → **5 passed** (Simulator, Terminal, Code Editor,
+ROS Status, OS-close-no-dock). The pop-in button path uses GL's `popIn` event (not
+`beforeunload`), so headless Chromium validates it faithfully — no false-positive risk.
+`npm run build` passes. **User confirmed "now it works"** after the frontend was rebuilt
+(final bundle `index-CpJb4Kyz.js`, healthy).
 
 ## Governance
 
