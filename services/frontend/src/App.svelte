@@ -185,13 +185,16 @@
   // (FR-A2). The earlier blank-window bug is avoided by the sub-window guard in
   // onMount (skip loadLayout when isSubWindow, FR-A5); terminals keep their
   // shell because the tmux session id travels in component state (FR-A4).
+  //
+  // GL v2.6 deprecated settings.showPopoutIcon in favour of header.popout
+  // (a string shows the icon with that tooltip; false hides it). Setting
+  // header.popout explicitly also overrides any stale saved-layout value of
+  // false that may have been written by an earlier build that hid the button.
   function withNativePopout(cfg) {
-    if (cfg)
-      cfg.settings = {
-        ...(cfg.settings ?? {}),
-        showPopoutIcon: true,
-        popInOnClose: true,
-      };
+    if (cfg) {
+      cfg.settings = { ...(cfg.settings ?? {}), popInOnClose: true };
+      cfg.header = { ...(cfg.header ?? {}), popout: 'pop out' };
+    }
     return cfg;
   }
 
