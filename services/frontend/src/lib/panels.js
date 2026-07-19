@@ -54,7 +54,10 @@ export const PANEL_DEFS = {
   'ros-status': {
     componentType: 'ros-status',
     title: 'ROS Status',
-    popout: false,
+    // Native pop-out serializes the component config and rebuilds it via the
+    // factory in the child window, so the non-iframe ROS Status panel pops out
+    // and re-docks like the rest (FR-A3).
+    popout: true,
     singleton: true,
   },
 };

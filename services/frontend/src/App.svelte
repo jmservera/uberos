@@ -12,7 +12,6 @@
     PANEL_DEFS,
     LAYOUT_PRESETS,
     LAYOUTS,
-    popoutUrl,
   } from './lib/panels.js';
   import { getConfig, getServices, restartService } from './lib/control.js';
 
@@ -115,11 +114,11 @@
   // Golden Layout offers no API for custom header buttons, so we inject our own
   // into each stack's control strip (.lm_controls, the right-aligned cluster
   // that also holds maximise/close). Putting them there keeps them clickable
-  // and clear of the tabs. Two buttons:
+  // and clear of the tabs. One button:
   //   +  add a terminal beside the current one (terminal stacks only, BR-003)
-  //   ⇗  open the active panel in a new browser window (BR-002)
+  // Pop-out is handled by Golden Layout's native header icon (FR-A1), not a
+  // custom button.
   const ADD_BTN_CLASS = 'uberos-add-terminal';
-  const POP_BTN_CLASS = 'uberos-popout';
   let injectScheduled = false;
 
   function eachStack(fn) {
@@ -154,7 +153,6 @@
       if (!controls) return;
       const items = stack.contentItems ?? [];
       const hasTerminal = items.some((ci) => ci.componentType === 'terminal');
-      const canPopout = items.some((ci) => !!popoutUrl(ci.componentType));
 
       if (hasTerminal && !controls.querySelector('.' + ADD_BTN_CLASS)) {
         controls.appendChild(
@@ -164,19 +162,6 @@
               (ci) => ci.componentType === 'terminal'
             );
             addTerminal(live);
-          })
-        );
-      }
-
-      if (canPopout && !controls.querySelector('.' + POP_BTN_CLASS)) {
-        controls.appendChild(
-          makeHeaderButton(POP_BTN_CLASS, '⇗', 'Open in new window', (e) => {
-            e.stopPropagation();
-            const active =
-              typeof stack.getActiveComponentItem === 'function'
-                ? stack.getActiveComponentItem()
-                : (stack.contentItems ?? [])[0];
-            openPanelWindow(panelWindowUrl(active));
           })
         );
       }
@@ -194,33 +179,20 @@
     });
   }
 
-  // Golden Layout's native pop-out (the header ⇗ icon) opens a fragile
-  // ?gl-window= child window that renders blank and loses its config on
-  // refresh. Disable it; our own ⇗ button opens the panel reliably (BR-002).
-  function withoutNativePopout(cfg) {
-    if (cfg) cfg.settings = { ...(cfg.settings ?? {}), showPopoutIcon: false };
+  // Re-enable Golden Layout's native pop-out (FR-A1): the header pop-out icon
+  // MOVES the panel into its own window (the original leaves the canvas). With
+  // popInOnClose, closing that window auto-docks the panel back to its origin
+  // (FR-A2). The earlier blank-window bug is avoided by the sub-window guard in
+  // onMount (skip loadLayout when isSubWindow, FR-A5); terminals keep their
+  // shell because the tmux session id travels in component state (FR-A4).
+  function withNativePopout(cfg) {
+    if (cfg)
+      cfg.settings = {
+        ...(cfg.settings ?? {}),
+        showPopoutIcon: true,
+        popInOnClose: true,
+      };
     return cfg;
-  }
-
-  // The live iframe URL carries the panel's current session (e.g. a terminal's
-  // ?arg=<tmux id>), so popping it out reconnects to the SAME shell and keeps
-  // its history. Fall back to the panel's base service URL for safety.
-  function panelWindowUrl(item) {
-    const frame = item?.element?.querySelector('iframe.panel-frame');
-    return frame?.src || (item && popoutUrl(item.componentType)) || null;
-  }
-
-  // Open a panel in a real, movable browser window (not a background tab). The
-  // width/height features make browsers spawn a separate window the user can
-  // drag to another monitor.
-  function openPanelWindow(url) {
-    if (!url) return;
-    const w = 1280;
-    const h = 800;
-    const left = Math.max(0, Math.round(((window.screen?.availWidth ?? 1600) - w) / 2));
-    const top = Math.max(0, Math.round(((window.screen?.availHeight ?? 900) - h) / 3));
-    const win = window.open(url, '_blank', `popup=yes,width=${w},height=${h},left=${left},top=${top}`);
-    if (win) win.opener = null;
   }
 
   // --- Menu actions -------------------------------------------------------
@@ -258,14 +230,17 @@
   function applyPreset(key) {
     const preset = LAYOUTS[key];
     if (!preset) return;
-    layout.loadLayout(withoutNativePopout(JSON.parse(JSON.stringify(preset))));
+    layout.loadLayout(withNativePopout(JSON.parse(JSON.stringify(preset))));
     refreshOpenPanels();
     closeMenu();
   }
 
-  // Pop a panel out into its own browser window with live content (BR-002).
+  // Pop a panel out using Golden Layout's native pop-out, which MOVES the panel
+  // into its own window (the original leaves the canvas, FR-A1) and docks it
+  // back when the window closes (FR-A2). Live content is preserved — a terminal
+  // reconnects to the same tmux session carried in its component state (FR-A4).
   function popout(type) {
-    openPanelWindow(panelWindowUrl(firstComponent(type)) ?? popoutUrl(type));
+    firstComponent(type)?.popout?.();
     closeMenu();
   }
 
@@ -330,12 +305,12 @@
     if (!isSub) {
       const saved = loadSavedLayout();
       try {
-        layout.loadLayout(withoutNativePopout(saved ?? defaultLayout));
+        layout.loadLayout(withNativePopout(saved ?? defaultLayout));
       } catch {
         // A corrupt saved layout can throw during resolution; drop it and fall
         // back to the default so the user always sees their panels.
         clearSavedLayout();
-        layout.loadLayout(withoutNativePopout(defaultLayout));
+        layout.loadLayout(withNativePopout(defaultLayout));
       }
     }
     refreshOpenPanels();
