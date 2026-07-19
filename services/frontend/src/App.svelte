@@ -34,6 +34,10 @@
   const popoutPanels = panelDefs.filter((d) => d.popout);
   let openCounts = {}; // componentType -> count of open instances
   let activeMenu = null; // 'panels' | 'layouts' | 'services' | null
+  // Terminal docking affinity policy (FR-B4). When on, terminals group only
+  // with terminals and every other panel stays solo; Theme C wires this to the
+  // system config dialog's terminal-affinity toggle.
+  let terminalAffinity = true;
   let authEnabled = false;
   let services = []; // [{ name, state, health }]
   let serviceBusy = null;
@@ -153,8 +157,14 @@
       if (!controls) return;
       const items = stack.contentItems ?? [];
       const hasTerminal = items.some((ci) => ci.componentType === 'terminal');
+      const terminalOnly =
+        items.length > 0 &&
+        items.every((ci) => ci.componentType === 'terminal');
+      // With affinity on, the new-terminal + shows only on terminal-only stacks
+      // (FR-B3); with affinity off, any stack containing a terminal shows it.
+      const showAdd = terminalAffinity ? terminalOnly : hasTerminal;
 
-      if (hasTerminal && !controls.querySelector('.' + ADD_BTN_CLASS)) {
+      if (showAdd && !controls.querySelector('.' + ADD_BTN_CLASS)) {
         controls.appendChild(
           makeHeaderButton(ADD_BTN_CLASS, '＋', 'New terminal', (e) => {
             e.stopPropagation();
@@ -193,6 +203,54 @@
         popInOnClose: true,
       };
     return cfg;
+  }
+
+  // --- Terminal docking affinity (FR-B1..FR-B4) --------------------------
+  // Golden Layout v2 has no built-in per-type drop constraint, so affinity is
+  // enforced right after a drop: only terminals may share a stack (with other
+  // terminals); every other panel type stays solo. When a drop creates a stack
+  // that mixes types, the just-dropped item is ejected into its own sibling
+  // stack, so the canvas never rests in a mixed state (BR-TD-1/BR-TD-2). The
+  // moved terminal keeps its shell because the tmux session id rides in
+  // component state (NFR-1). The policy is toggleable via `terminalAffinity`.
+  let enforcingAffinity = false;
+
+  // Relocate a component out of its current (violating) stack into a new
+  // sibling stack, preserving its component state (e.g. a terminal session id).
+  function ejectItem(item) {
+    const stack = item?.parent;
+    const parent = stack?.parent;
+    if (!stack || !parent || typeof parent.addItem !== 'function') return;
+    const resolved = item.toConfig();
+    const cfg = {
+      type: 'component',
+      componentType: resolved.componentType ?? item.componentType,
+      title: resolved.title ?? item.title,
+      componentState: resolved.componentState,
+    };
+    const index = parent.contentItems.indexOf(stack);
+    item.remove();
+    parent.addItem(cfg, index < 0 ? undefined : index + 1);
+  }
+
+  // On drop, if the dropped item now sits in a type-mixed stack, move it out so
+  // the affinity policy holds (FR-B1/B2). Guarded against re-entrancy.
+  function enforceTerminalAffinity(item) {
+    if (!terminalAffinity || enforcingAffinity || !item) return;
+    const items = item.parent?.contentItems ?? [];
+    if (items.length < 2) return;
+    const conflict =
+      item.componentType === 'terminal'
+        ? items.some((ci) => ci.componentType !== 'terminal')
+        : items.some((ci) => ci !== item); // non-terminals must stay solo
+    if (!conflict) return;
+    enforcingAffinity = true;
+    try {
+      ejectItem(item);
+    } finally {
+      enforcingAffinity = false;
+      scheduleInject();
+    }
   }
 
   // --- Menu actions -------------------------------------------------------
@@ -328,6 +386,10 @@
       channel?.postMessage({ type: 'panel-created', panel: item.target?.type });
       scheduleInject();
     });
+
+    // Enforce terminal docking affinity after a drop (FR-B1/B2). GL v2 has no
+    // native per-type drop constraint, so mixed stacks are corrected post-drop.
+    layout.on('itemDropped', (item) => enforceTerminalAffinity(item));
 
     // Discover whether auth is enabled (controls Logout visibility) and the
     // set of services the menu may reset.
