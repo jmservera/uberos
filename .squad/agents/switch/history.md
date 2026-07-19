@@ -77,3 +77,29 @@
   Determinate constructor + sub-window header omission + sub-window title unchanged.
   `npm run build` passes; deployed (bundle `index-CAYET3wX.js`, `/healthz` 200). **PENDING
   real-browser (Edge) validation** — automated gating unreliable for this symptom.
+- **FINAL root cause + fix — `beforeunload` activation, native pop-in button (2026-07-20,
+  supersedes ALL dock-back attempts above):** The RWCA "root fix" fixed sizing but
+  restored `popInOnClose: true`, which reintroduced the ACTUAL user-facing defect. Proven
+  via live beacons from the user's REAL Chrome (routed through the nginx access logs):
+  GL's automatic dock-back is bound to the popout's `beforeunload`, which real Chrome does
+  NOT fire for passive panels (Simulator, ROS Status) that never receive a user gesture /
+  sticky activation → GL's `popIn()` is never called → they stay closed. Terminal/Editor
+  worked only because their popout got a gesture. Never reproducible in Playwright
+  (automation + `window.close()` bypass the activation gate). Beacons: Terminal close →
+  `popIn-start`→`popIn-ok`; Simulator close → `windowClosed` with NO `popIn-start`.
+  **Final fix (user-approved, net code REMOVED):** abandon auto-dock-back-on-close. Set
+  `settings.popInOnClose: false` and call GL's public `layout.checkAddDefaultPopinButton()`
+  in the sub-window branch → renders GL's NATIVE `.lm_popin` control, wired to
+  `emit('popIn')` (parent BrowserPopout listens on the child's `__glInstance`, re-docks +
+  closes). Reliable for ALL panels because it uses the `popIn` event path, NOT
+  `beforeunload`. OS-X close intentionally leaves the panel closed (reopen from Panels
+  menu). GL normally adds this button from `clearHtmlAndAdjustStylesForSubWindow()`, which
+  the determinate constructor skips, so we call it ourselves. **Kept:** determinate
+  constructor, `resizeWithContainerAutomatically = true`, `{#if !isSubWindow}` header
+  omission, sub-window title. **Removed:** the addComponent net, the `window.closed`
+  polling net, the custom `.uberos-dock-btn` button + app.css rules, and all
+  `[UBEROS-DIAG]` instrumentation. `npm run build` passes; validated by Tank's rewritten
+  s5b (5 passed). User confirmed "now it works" (final bundle `index-CpJb4Kyz.js`).
+  **Takeaway:** `beforeunload`-based auto-dock is unreliable in Chrome for passive
+  windows; prefer GL's user-clicked native pop-in button. Diagnostic beacons via nginx
+  logs were how the root cause was proven.

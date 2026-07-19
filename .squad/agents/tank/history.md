@@ -34,3 +34,18 @@
   tab drag between dock-back and measurement). The actual root cause was the embedded GL
   container missing `resizeWithContainerAutomatically = true` (see Switch's history); the
   `addComponent` net was reverted.
+- **FINAL — s5b rewritten for the native pop-in button model (2026-07-20):** Root cause
+  was confirmed (via Switch's real-Chrome beacons) as GL's `beforeunload`-bound dock-back
+  not firing for passive panels; final fix is `popInOnClose:false` +
+  `layout.checkAddDefaultPopinButton()` (GL's native `.lm_popin` button, `popIn` event
+  path). Rewrote `tests/acceptance/s5b-popout-dockback.spec.js` for this model — per
+  panel: pop out via `.lm_popout`, assert `.lm_popin` visible in the popup, click it,
+  assert the popup closes + panel back in main canvas at non-zero size, no duplicate; plus
+  a test that OS-close (`window.close()`) leaves the panel closed. `npx playwright test
+  s5b-popout-dockback` → **5 passed** (Simulator, Terminal, Code Editor, ROS Status,
+  OS-close-no-dock). **Key testing insight:** because the pop-in BUTTON uses GL's `popIn`
+  event (NOT `beforeunload`), headless Chromium validates it faithfully — no
+  false-positive risk, unlike the earlier reverted `addComponent`/close-based approach
+  where headless masked the stuck-until-resize symptom. Beacon-based diagnosis (routing
+  `[UBEROS-DIAG]` beacons through nginx access logs) was how the beforeunload root cause
+  was proven in the user's real browser when Playwright could not reproduce it.
