@@ -48,10 +48,10 @@ jobs:
       - name: Lint JavaScript (ESLint)
         run: |
           npm init -y > /dev/null 2>&1
-          npm install --no-save eslint@8 > /dev/null 2>&1
-          npx eslint --no-eslintrc \
+          npm install --no-save --ignore-scripts eslint@8 > /dev/null 2>&1
+          npx --no-install eslint --no-eslintrc \
             --env browser,node,es2022 \
-            --parser-options=ecmaVersion:2022,sourceType:module \
+            --parser-options='{"ecmaVersion":2022,"sourceType":"module"}' \
             --rule '{"no-undef":"off","no-unused-vars":"warn"}' \
             'services/frontend/src/**/*.js' \
             'services/frontend/*.config.js' \
@@ -60,7 +60,7 @@ jobs:
 
       - name: Lint CSS (stylelint)
         run: |
-          npm install --no-save stylelint@16 stylelint-config-standard@36 > /dev/null 2>&1
+          npm install --no-save --ignore-scripts stylelint@16 stylelint-config-standard@36 > /dev/null 2>&1
           # stylelint@16's --config expects a file path (not inline JSON), and it
           # resolves `extends` relative to the config file, so write it next to
           # node_modules. selector-class-pattern keeps kebab-case for project
@@ -76,7 +76,7 @@ jobs:
             }
           }
           EOF
-          npx stylelint --config stylelint.ci.json \
+          npx --no-install stylelint --config stylelint.ci.json \
             'services/frontend/src/**/*.css'
 
   # ── Job 2: Build images, start the stack, run smoke + acceptance ───────
