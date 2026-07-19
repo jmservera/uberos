@@ -17,6 +17,13 @@
 
   const LAYOUT_KEY = 'uberos.layout.v1';
 
+  // Detect a Golden Layout sub-window from the URL, independent of GL's own
+  // one-time isSubWindow check. GL flags pop-out windows with the `gl-window`
+  // query param; reading location.search here does not disturb that check. We
+  // use this to omit the UbeROS titlebar/menubar from popped-out windows so the
+  // detached panel fills the whole window (FR-A5, BR-002).
+  const isSubWindow = new URLSearchParams(window.location.search).has('gl-window');
+
   // BroadcastChannel keeps pop-out windows and the main canvas in sync.
   // Closing a pop-out sends browser state only; it never stops a workload (S5).
   const channel =
@@ -195,13 +202,16 @@
   // (FR-A2). The earlier blank-window bug is avoided by the sub-window guard in
   // onMount (skip loadLayout when isSubWindow, FR-A5); terminals keep their
   // shell because the tmux session id travels in component state (FR-A4).
+  //
+  // GL v2.6 deprecated settings.showPopoutIcon in favour of header.popout
+  // (a string shows the icon with that tooltip; false hides it). Setting
+  // header.popout explicitly also overrides any stale saved-layout value of
+  // false that may have been written by an earlier build that hid the button.
   function withNativePopout(cfg) {
-    if (cfg)
-      cfg.settings = {
-        ...(cfg.settings ?? {}),
-        showPopoutIcon: true,
-        popInOnClose: true,
-      };
+    if (cfg) {
+      cfg.settings = { ...(cfg.settings ?? {}), popInOnClose: true };
+      cfg.header = { ...(cfg.header ?? {}), popout: 'pop out' };
+    }
     return cfg;
   }
 
@@ -345,20 +355,47 @@
   }
 
   onMount(() => {
-    layout = new GoldenLayout(container);
-
-    for (const [type, build] of Object.entries(factories)) {
-      layout.registerComponentFactoryFunction(type, (componentContainer) => {
-        build(componentContainer.element, componentContainer);
-      });
-    }
+    // Golden Layout wipes document.body in a sub-window UNLESS the constructor
+    // is "determinate" — i.e. a bindComponentEventHandler is supplied. Without
+    // it, GL flags the constructor indeterminate, defers init by 7ms, and then
+    // runs clearHtmlAndAdjustStylesForSubWindow() which does
+    // `document.body.innerHTML = ''`. That destroys the Svelte-rendered DOM,
+    // including the `bind:this={container}` element, so popped-out windows come
+    // up BLANK. Passing bind/unbind handlers makes init run synchronously and
+    // SKIPS the body wipe, preserving the Svelte-managed DOM. GL still sets
+    // window.__glInstance = this in the sub-window, so the parent's dock-back /
+    // popInOnClose behaviour keeps working. We build panels from the same
+    // `factories` map the old registerComponentFactoryFunction loop used.
+    layout = new GoldenLayout(
+      container,
+      (componentContainer, itemConfig) => {
+        const build = factories[itemConfig.componentType];
+        if (build) build(componentContainer.element, componentContainer);
+        return { component: undefined, virtual: false };
+      },
+      () => {
+        // No explicit teardown needed: GL removes the container element's DOM
+        // when the component is unbound (panel closed / popped out).
+      }
+    );
 
     // A popped-out panel loads this same app in a subwindow. Golden Layout
     // auto-loads the popped component's config there, so we must NOT restore
     // the saved/default layout (that would clobber the pop-out, BR-002) nor
     // persist its state back over the main window (S5).
     const isSub = layout.isSubWindow;
-    if (isSub) document.body.classList.add('uberos-subwindow');
+    if (isSub) {
+      document.body.classList.add('uberos-subwindow');
+      // Title the pop-out window/tab after the panel it holds (e.g. "Terminal",
+      // "Code Editor") instead of the static index.html title. In a GL
+      // sub-window the popped component is the layout root, so rootItem is the
+      // ComponentItem directly; init() has already run synchronously via the
+      // determinate constructor, so rootItem is safe to read here. Fall back to
+      // the first walked component if GL ever wraps the root differently.
+      let title = layout.rootItem?.title;
+      if (!title) forEachComponent((c) => (title ??= c.title));
+      if (title) document.title = title;
+    }
 
     if (!isSub) {
       const saved = loadSavedLayout();
@@ -432,6 +469,7 @@
 </script>
 
 <div class="uberos-shell">
+  {#if !isSubWindow}
   <header class="uberos-titlebar">
     <span class="brand">UbeROS</span>
     <span class="tagline">ROS in your browser</span>
@@ -522,6 +560,7 @@
       {/if}
     </nav>
   </header>
+  {/if}
   <div class="uberos-canvas" bind:this={container}></div>
 </div>
 
