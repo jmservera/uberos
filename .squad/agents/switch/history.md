@@ -21,3 +21,11 @@
   SKIPS the body wipe. `window.__glInstance` is still set in the sub-window, so
   dock-back / `popInOnClose` keep working. The `isSubWindow` guard on `loadLayout`
   alone is necessary but NOT sufficient — the body wipe is the real culprit.
+- **GL sub-window chrome & title (2026-07-19):** With the *determinate* constructor
+  the framework DOM is preserved (no `document.body` wipe), so a global CSS hide rule
+  competes with App.svelte's scoped `.uberos-titlebar { display:flex }` and the
+  titlebar leaks into pop-outs. Robust fix: hide non-panel chrome via **conditional
+  render** (`{#if !isSubWindow}` around the header, flag from `?gl-window`) instead of
+  CSS. Also set `document.title` from `layout.rootItem?.title` (with a
+  `forEachComponent` fallback) in the sub-window branch so the pop-out window/tab
+  reads the panel name rather than the static app title.

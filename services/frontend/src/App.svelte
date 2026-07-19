@@ -17,6 +17,13 @@
 
   const LAYOUT_KEY = 'uberos.layout.v1';
 
+  // Detect a Golden Layout sub-window from the URL, independent of GL's own
+  // one-time isSubWindow check. GL flags pop-out windows with the `gl-window`
+  // query param; reading location.search here does not disturb that check. We
+  // use this to omit the UbeROS titlebar/menubar from popped-out windows so the
+  // detached panel fills the whole window (FR-A5, BR-002).
+  const isSubWindow = new URLSearchParams(window.location.search).has('gl-window');
+
   // BroadcastChannel keeps pop-out windows and the main canvas in sync.
   // Closing a pop-out sends browser state only; it never stops a workload (S5).
   const channel =
@@ -319,7 +326,18 @@
     // the saved/default layout (that would clobber the pop-out, BR-002) nor
     // persist its state back over the main window (S5).
     const isSub = layout.isSubWindow;
-    if (isSub) document.body.classList.add('uberos-subwindow');
+    if (isSub) {
+      document.body.classList.add('uberos-subwindow');
+      // Title the pop-out window/tab after the panel it holds (e.g. "Terminal",
+      // "Code Editor") instead of the static index.html title. In a GL
+      // sub-window the popped component is the layout root, so rootItem is the
+      // ComponentItem directly; init() has already run synchronously via the
+      // determinate constructor, so rootItem is safe to read here. Fall back to
+      // the first walked component if GL ever wraps the root differently.
+      let title = layout.rootItem?.title;
+      if (!title) forEachComponent((c) => (title ??= c.title));
+      if (title) document.title = title;
+    }
 
     if (!isSub) {
       const saved = loadSavedLayout();
@@ -389,6 +407,7 @@
 </script>
 
 <div class="uberos-shell">
+  {#if !isSubWindow}
   <header class="uberos-titlebar">
     <span class="brand">UbeROS</span>
     <span class="tagline">ROS in your browser</span>
@@ -479,6 +498,7 @@
       {/if}
     </nav>
   </header>
+  {/if}
   <div class="uberos-canvas" bind:this={container}></div>
 </div>
 

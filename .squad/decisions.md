@@ -54,6 +54,37 @@ header.popout) and the `isSub` guard on `loadLayout` are unchanged.
 **Validation:** `npm run build` (vite v5.4.21) passes — 125 modules transformed,
 built in 36s. No custom pop-out button code reintroduced (native pop-out only, FR-A6).
 
+### 2026-07-19: Pop-out sub-window UI polish (chrome + title)
+
+**By:** Switch (Frontend Engineer), requested by jmservera
+**Scope:** services/frontend/src/App.svelte, services/frontend/src/app.css — sub-window (popped-out) path only. Follow-up polish on the native pop-out entry above.
+
+**What:**
+1. **Conditional header render** — Added a URL-derived `isSubWindow` flag
+   (`new URLSearchParams(window.location.search).has('gl-window')`) computed
+   independently of Golden Layout. Wrapped the entire `<header class="uberos-titlebar">`
+   in `{#if !isSubWindow} … {/if}` so the UbeROS brand/menubar is omitted from the
+   DOM in popped-out windows rather than hidden via competing CSS. The
+   `.uberos-canvas` container is always rendered (GL needs it). Removed the now-dead
+   `body.uberos-subwindow .uberos-titlebar { display:none }` rule from app.css and
+   updated the adjacent comment; the `uberos-subwindow` body class is still set in
+   onMount as a hook for potential future sub-window-only styling.
+2. **Panel-named window title** — In onMount, when `layout.isSubWindow` is true, set
+   `document.title` from the popped component's title (`layout.rootItem?.title`, with a
+   `forEachComponent` walk fallback), so the pop-out window/tab reads the panel name
+   (e.g. "Terminal", "Code Editor") instead of the static "UbeROS - Work".
+
+**Why:** Once the determinate constructor stopped wiping document.body, App.svelte's
+scoped `.uberos-titlebar { display:flex }` competed with the global hide rule, so the
+titlebar leaked into pop-outs. Not rendering the header at all is robust against CSS
+specificity. Panel-named titles make multi-display workflows legible.
+
+**Constraints honored:** Main window unchanged (header + title intact). No custom
+pop-out button reintroduced; `withNativePopout` (popInOnClose + header.popout) and the
+determinate constructor left intact.
+
+**Validation:** `npm run build` (vite) passes — 125 modules, built clean.
+
 ## Governance
 
 - All meaningful changes require team consensus
