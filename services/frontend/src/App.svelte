@@ -18,6 +18,13 @@
   const LAYOUT_KEY = 'uberos.layout.v1';
   const LAYOUT_KEYS = Object.keys(LAYOUTS);
 
+  // Detect a Golden Layout sub-window from the URL, independent of GL's own
+  // one-time isSubWindow check. GL flags pop-out windows with the `gl-window`
+  // query param; reading location.search here does not disturb that check. We
+  // use this to omit the UbeROS titlebar/menubar from popped-out windows so the
+  // detached panel fills the whole window (FR-A5, BR-002).
+  const isSubWindow = new URLSearchParams(window.location.search).has('gl-window');
+
   // BroadcastChannel keeps pop-out windows and the main canvas in sync.
   // Closing a pop-out sends browser state only; it never stops a workload (S5).
   const channel =
@@ -182,8 +189,14 @@
       // With affinity on, the new-terminal + shows only on terminal-only stacks
       // (FR-B3); with affinity off, any stack containing a terminal shows it.
       const showAdd = terminalAffinity ? terminalOnly : hasTerminal;
+      const existing = controls.querySelector('.' + ADD_BTN_CLASS);
 
-      if (showAdd && !controls.querySelector('.' + ADD_BTN_CLASS)) {
+      if (!showAdd) {
+        existing?.remove();
+        return;
+      }
+
+      if (!existing) {
         controls.appendChild(
           makeHeaderButton(ADD_BTN_CLASS, '＋', 'New terminal', (e) => {
             e.stopPropagation();
@@ -244,19 +257,33 @@
     });
   }
 
-  // Re-enable Golden Layout's native pop-out (FR-A1): the header pop-out icon
-  // MOVES the panel into its own window (the original leaves the canvas). With
-  // popInOnClose, closing that window auto-docks the panel back to its origin
-  // (FR-A2). The earlier blank-window bug is avoided by the sub-window guard in
-  // onMount (skip loadLayout when isSubWindow, FR-A5); terminals keep their
-  // shell because the tmux session id travels in component state (FR-A4).
+  // Enable Golden Layout's native pop-out (FR-A1): the header pop-out icon
+  // MOVES the panel into its own window (the original leaves the canvas). The
+  // earlier blank-window bug is avoided by the sub-window guard in onMount
+  // (skip loadLayout when isSubWindow, FR-A5); terminals keep their shell
+  // because the tmux session id travels in component state (FR-A4).
+  //
+  // popInOnClose is OFF: dock-back is now driven by an explicit in-window Dock
+  // button (added in onMount for sub-windows), NOT by GL's automatic dock-back.
+  // GL's native dock-back is bound to the popout window's beforeunload, which
+  // Chrome does not fire reliably for passive panels (Simulator, ROS Status)
+  // that never receive a user gesture — confirmed empirically. With
+  // popInOnClose:false, the Dock button emits GL's 'popIn' event on the child's
+  // layout instance, which the parent BrowserPopout listens for and uses to
+  // re-dock the panel and close the popout — reliable and gesture-independent.
+  // Closing the popout via the OS window button simply leaves the panel closed
+  // (reopen from the Panels menu).
+  //
+  // header.popout is kept ON so the MAIN window still shows the native pop-OUT
+  // icon (FR-A1). GL v2.6 deprecated settings.showPopoutIcon in favour of
+  // header.popout (a string shows the icon with that tooltip; false hides it).
+  // Setting it explicitly also overrides any stale saved-layout value of false
+  // written by an earlier build that hid the button.
   function withNativePopout(cfg) {
-    if (cfg)
-      cfg.settings = {
-        ...(cfg.settings ?? {}),
-        showPopoutIcon: true,
-        popInOnClose: true,
-      };
+    if (cfg) {
+      cfg.settings = { ...(cfg.settings ?? {}), popInOnClose: false };
+      cfg.header = { ...(cfg.header ?? {}), popout: 'pop out' };
+    }
     return cfg;
   }
 
@@ -477,20 +504,67 @@
   }
 
   onMount(() => {
-    layout = new GoldenLayout(container);
+    // Golden Layout wipes document.body in a sub-window UNLESS the constructor
+    // is "determinate" — i.e. a bindComponentEventHandler is supplied. Without
+    // it, GL flags the constructor indeterminate, defers init by 7ms, and then
+    // runs clearHtmlAndAdjustStylesForSubWindow() which does
+    // `document.body.innerHTML = ''`. That destroys the Svelte-rendered DOM,
+    // including the `bind:this={container}` element, so popped-out windows come
+    // up BLANK. Passing bind/unbind handlers makes init run synchronously and
+    // SKIPS the body wipe, preserving the Svelte-managed DOM. GL still sets
+    // window.__glInstance = this in the sub-window, so native pop-out/dock-back
+    // keeps working. We build panels from the same `factories` map the old
+    // registerComponentFactoryFunction loop used.
+    layout = new GoldenLayout(
+      container,
+      (componentContainer, itemConfig) => {
+        const build = factories[itemConfig.componentType];
+        if (build) build(componentContainer.element, componentContainer);
+        return { component: undefined, virtual: false };
+      },
+      () => {
+        // No explicit teardown needed: GL removes the container element's DOM
+        // when the component is unbound (panel closed / popped out).
+      }
+    );
 
-    for (const [type, build] of Object.entries(factories)) {
-      layout.registerComponentFactoryFunction(type, (componentContainer) => {
-        build(componentContainer.element, componentContainer);
-      });
-    }
+    // GL only auto-reflows an embedded layout to its container when
+    // resizeWithContainerAutomatically is true. For a non-<body> container GL
+    // defaults this to FALSE, so its ResizeObserver (already observing this
+    // container since init()) is a no-op and the layout resizes ONLY when the
+    // app calls updateSize() — which historically happened only in a window
+    // 'resize' handler. That is the root cause of the dock-back-invisible bug:
+    // a panel re-entering the tree on native dock-back was sized mid-reflow and
+    // never re-flowed until the next window resize or splitter/tab drag.
+    // Enabling it here activates GL's own observer to debounce-reflow from the
+    // container's real box on every size change, so dock-back sizes immediately
+    // and the manual window-resize handler is no longer needed.
+    layout.resizeWithContainerAutomatically = true;
 
     // A popped-out panel loads this same app in a subwindow. Golden Layout
     // auto-loads the popped component's config there, so we must NOT restore
     // the saved/default layout (that would clobber the pop-out, BR-002) nor
     // persist its state back over the main window (S5).
     const isSub = layout.isSubWindow;
-    if (isSub) document.body.classList.add('uberos-subwindow');
+    if (isSub) {
+      document.body.classList.add('uberos-subwindow');
+      // GL's native pop-in button (lm_popin). It emits 'popIn' on this child's
+      // layout; the parent BrowserPopout docks the panel back and (popInOnClose
+      // is false) closes this window. GL only auto-adds it from the indeterminate
+      // sub-window bootstrap, which our determinate constructor skips, so we add
+      // it explicitly. Styled by the imported goldenlayout theme CSS.
+      layout.checkAddDefaultPopinButton?.();
+
+      // Title the pop-out window/tab after the panel it holds (e.g. "Terminal",
+      // "Code Editor") instead of the static index.html title. In a GL
+      // sub-window the popped component is the layout root, so rootItem is the
+      // ComponentItem directly; init() has already run synchronously via the
+      // determinate constructor, so rootItem is safe to read here. Fall back to
+      // the first walked component if GL ever wraps the root differently.
+      let title = layout.rootItem?.title;
+      if (!title) forEachComponent((c) => (title ??= c.title));
+      if (title) document.title = title;
+    }
 
     if (!isSub) {
       const saved = loadSavedLayout();
@@ -556,7 +630,6 @@
     container.addEventListener('touchstart', startDrag, true);
 
     return () => {
-      window.removeEventListener('resize', onResize);
       window.removeEventListener('click', onWindowClick, true);
       container.removeEventListener('mousedown', startDrag, true);
       container.removeEventListener('touchstart', startDrag, true);
@@ -569,6 +642,7 @@
 </script>
 
 <div class="uberos-shell">
+  {#if !isSubWindow}
   <header class="uberos-titlebar">
     <span class="brand">UbeROS</span>
     <span class="tagline">ROS in your browser</span>
@@ -666,6 +740,7 @@
       {/if}
     </nav>
   </header>
+  {/if}
   <div class="uberos-canvas" bind:this={container}></div>
 
   <!-- System configuration dialog (Theme C, FR-C1..FR-C6). -->
