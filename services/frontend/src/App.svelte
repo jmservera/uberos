@@ -221,9 +221,10 @@
 
   // Enable Golden Layout's native pop-out (FR-A1): the header pop-out icon
   // MOVES the panel into its own window (the original leaves the canvas). The
-  // earlier blank-window bug is avoided by the sub-window guard in onMount
-  // (skip loadLayout when isSubWindow, FR-A5); terminals keep their shell
-  // because the tmux session id travels in component state (FR-A4).
+  // earlier blank-window bug is avoided by using the determinate GoldenLayout
+  // constructor in onMount (bind/unbind handlers) and by skipping loadLayout in
+  // sub-windows (FR-A5); terminals keep their shell because the tmux session id
+  // travels in component state (FR-A4).
   //
   // popInOnClose is OFF: dock-back is now driven by an explicit in-window Dock
   // button (added in onMount for sub-windows), NOT by GL's automatic dock-back.
@@ -609,7 +610,8 @@
       clearTimeout(statusTimer);
       channel?.close();
       layout.destroy();
-      panelCleanups.clear(); // clear any panels not unbound during destroy
+      for (const cleanup of panelCleanups.values()) cleanup();
+      panelCleanups.clear();
     };
   });
 </script>

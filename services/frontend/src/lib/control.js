@@ -42,13 +42,13 @@ export async function restartService(name) {
 }
 
 // System settings persisted server-side (Theme C, FR-C2). getSettings returns
-// { user, version, settings }; on failure it yields empty settings so the SPA
-// falls back to its built-in defaults.
+// { user, version, schemaVersion, settings }; on failure it yields empty
+// settings so the SPA falls back to its built-in defaults.
 export async function getSettings() {
   try {
     return await json('/config/settings');
   } catch {
-    return { user: 'default', version: 1, settings: {} };
+    return { user: 'default', version: 1, schemaVersion: 1, settings: {} };
   }
 }
 
