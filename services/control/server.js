@@ -69,16 +69,19 @@ function sanitizeSettings(input) {
 
 // Read the settings store, falling back to defaults if the file is missing or
 // unreadable. The `user` key is reserved for future per-user scoping (FR-C4).
+// `schemaVersion` is reserved for future config-store migrations (ADR-010,
+// AE-O2) and is distinct from `version` (the data version).
 async function readSettingsStore() {
   try {
     const parsed = JSON.parse(await readFile(CONFIG_FILE, 'utf8'));
     return {
       user: typeof parsed.user === 'string' ? parsed.user : 'default',
       version: 1,
+      schemaVersion: typeof parsed.schemaVersion === 'number' ? parsed.schemaVersion : 1,
       settings: sanitizeSettings(parsed.settings),
     };
   } catch {
-    return { user: 'default', version: 1, settings: { ...DEFAULT_SETTINGS } };
+    return { user: 'default', version: 1, schemaVersion: 1, settings: { ...DEFAULT_SETTINGS } };
   }
 }
 
@@ -87,6 +90,9 @@ async function writeSettingsStore(user, settings) {
   const store = {
     user: typeof user === 'string' && user.length <= 64 ? user : 'default',
     version: 1,
+    // schemaVersion is reserved for future config-store migrations (ADR-010,
+    // AE-O2); migration logic itself is still future work.
+    schemaVersion: 1,
     settings: sanitizeSettings(settings),
   };
   await mkdir(dirname(CONFIG_FILE), { recursive: true });

@@ -62,12 +62,6 @@ export const PANEL_DEFS = {
   },
 };
 
-// Absolute pop-out URL for a panel type, or null when it is not iframe-backed.
-export function popoutUrl(type) {
-  const def = PANEL_DEFS[type];
-  return def?.url ? absoluteUrl(def.url) : null;
-}
-
 export function buildSimulatorPanel(el) {
   // noVNC served under /novnc/, bridging to websockify.
   el.appendChild(makeIframe(PANEL_DEFS.simulator.url));

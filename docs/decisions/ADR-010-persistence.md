@@ -1,7 +1,7 @@
 # ADR-010: Persistence and Volume Strategy
 
-- Status: Accepted — Partially implemented (editor volumes done; server-side config store pending, Theme C; schema versioning AE-O2)
-- Implementation: `compose.yaml` volumes `editor-data`/`editor-config` mounted; `control /config` is currently read-only (no config write path yet)
+- Status: Accepted — Partially implemented (editor volumes done; server-side config store done, Theme C; migration path AE-O2 pending)
+- Implementation: `compose.yaml` volumes `editor-data`/`editor-config` mounted; server-side config store done — `control` service serves `GET`/`PUT /config/settings`, persisted to `/data/config.json` on the `control-data` volume, with `schemaVersion` (currently `1`) reserved per AE-O2; migration logic itself is still future work
 - Date: 2026-07-19
 - Deciders: jmservera (product), Trinity (technical)
 - Related: PRD Theme C/D (FR-C2, FR-C4, FR-D1..D4, NFR-7), BRD BR-CFG-1..6/BR-CS-1..4, PR #14, Section 18 AE-R2/AE-S4, ADR-005 (auth)

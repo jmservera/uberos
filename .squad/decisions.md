@@ -284,6 +284,10 @@ custom dock-back machinery entirely.
   observer debounce-reflows from the real box. This also covers structural dock-back.
 - Restore native dock-back: `withNativePopout` now sets `popInOnClose: true` (was
   `false`). GL re-inserts the panel itself; RWCA makes it size immediately.
+  > **Superseded 2026-07-20** — reverted to `popInOnClose: false`; dock-back is now
+  > manual via GL's native pop-in button (`checkAddDefaultPopinButton()`) or the Panels
+  > menu. Auto-dock-on-close was erratic on passive panels (Chrome does not reliably fire
+  > the popout `beforeunload` without a user gesture). See the 2026-07-20 FINAL entry below.
 - Removed the entire custom net: `popoutConfigs` map, helpers `readComponentState`,
   `findComponentInConfig`, `readPoppedConfig`, `componentPresent`, the
   `windowOpened`/`windowClosed` handlers, and the manual `window 'resize'` handler

@@ -17,7 +17,7 @@
   destroys any framework-managed (Svelte) container element before `super.init()`
   runs. Fix: use the **determinate constructor** — pass
   `bindComponentEventHandler` (+ `unbindComponentEventHandler`). This sets
-  `_bindComponentEventHanlderPassedInConstructor = true`, makes init synchronous, and
+  `_bindComponentEventHandlerPassedInConstructor = true`, makes init synchronous, and
   SKIPS the body wipe. `window.__glInstance` is still set in the sub-window, so
   dock-back / `popInOnClose` keep working. The `isSubWindow` guard on `loadLayout`
   alone is necessary but NOT sufficient — the body wipe is the real culprit.
@@ -40,7 +40,8 @@
   re-add via `layout.addComponent` ONLY if the component is MISSING from the main
   layout. Cooperates with `popInOnClose` without double-docking. Match terminals by
   tmux `session` id in component state to preserve the shell and avoid one terminal
-  masking a missing one.- **REAL root cause — GL `popInOnClose` re-docks at 0×0 (2026-07-19, supersedes the
+  masking a missing one.
+- **REAL root cause — GL `popInOnClose` re-docks at 0×0 (2026-07-19, supersedes the
   net above):** The earlier presence-check net was NOT the fix. GL's
   `settings.popInOnClose: true` re-docks a closed pop-out SYNCHRONOUSLY on the
   child `beforeunload`, inserting into `groundItem.contentItems[0]` while the parent

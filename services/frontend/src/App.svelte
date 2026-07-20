@@ -521,7 +521,10 @@
       // is false) closes this window. GL only auto-adds it from the indeterminate
       // sub-window bootstrap, which our determinate constructor skips, so we add
       // it explicitly. Styled by the imported goldenlayout theme CSS.
-      layout.checkAddDefaultPopinButton?.();
+      // Fail loudly (no optional chaining): dock-back depends on this GL v2.6
+      // public API; if it ever disappears we want an immediate error, not a
+      // silent no-op.
+      layout.checkAddDefaultPopinButton();
 
       // Title the pop-out window/tab after the panel it holds (e.g. "Terminal",
       // "Code Editor") instead of the static index.html title. In a GL
@@ -598,6 +601,7 @@
     container.addEventListener('touchstart', startDrag, true);
 
     return () => {
+      window.removeEventListener('resize', onResize);
       window.removeEventListener('click', onWindowClick, true);
       container.removeEventListener('mousedown', startDrag, true);
       container.removeEventListener('touchstart', startDrag, true);

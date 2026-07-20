@@ -95,6 +95,7 @@ menu to change a system setting that sticks; restart the stack and find the edit
 * Configuration is persisted **server-side** through the control service (to a file on a mounted volume), not in the browser. Per-browser-only preferences may still use localStorage, but system settings are server-side.
 * The system ships **single-user** this iteration; the persistence schema reserves a user key so per-user isolation can be added later without redesign.
 * Dock-back uses Golden Layout `popInOnClose`: **closing a popped-out window auto-docks** the panel back to its origin.
+  * **Superseded 2026-07-20:** revised to `popInOnClose: false` with **manual pop-in** — Golden Layout's native pop-in button (`.lm_popin`, added via `layout.checkAddDefaultPopinButton()`) in the popped-out window, or reopening the panel from the Panels menu. Auto-dock-on-close was dropped because it behaved erratically on passive panels (Simulator, ROS Status): Chrome does not reliably fire the popout window's `beforeunload` for windows that never received a user gesture. Closing the popped-out window via the OS button now simply leaves the panel closed (reopen from the Panels menu).
 ### Constraints
 * Single reverse proxy; backend ports never host-published.
 * Secret-handling rules: tokens never committed; protected at rest.
@@ -109,8 +110,9 @@ persist, and simulation uses the GPU.
 * Library-native window management instead of a bespoke clone button.
 * Server-side terminal persistence (tmux) so detaching never loses a shell.
 ### UX / UI (Conditional)
-Pop-out uses Golden Layout's header control; closing the popped window auto-docks the panel back
-(`popInOnClose`). Every panel has a collapse-to-header control (the panel shrinks to its header/tab
+Pop-out uses Golden Layout's header control; docking back is manual via the popped-out window's
+native pop-in control (or reopening the panel from the Panels menu). Every panel has a
+collapse-to-header control (the panel shrinks to its header/tab
 bar; click to restore to its previous size). A Configuration
 menu entry opens a modal dialog whose initial settings are: default layout, simulator GPU adapter,
 theme, auth-mode display, and the terminal-affinity/grouping toggle, plus a reset-to-defaults
@@ -120,7 +122,7 @@ button. UX Status: Draft
 | FR ID | Title | Description | Goals | Personas | Priority | Acceptance | Notes |
 |-------|-------|------------|-------|----------|----------|-----------|-------|
 | FR-A1 | Native pop-out (move) | Popping a panel uses Golden Layout native pop-out; the original leaves the canvas (no clone). | G-001 | ROS Developer | Must | Pop-out removes the source panel and opens it in a separate window | Re-enable `showPopoutIcon` |
-| FR-A2 | Auto dock-back on close | Closing a popped-out window automatically docks the panel back to its origin (or a sensible fallback). | G-001 | ROS Developer | Must | Closing the popped window returns the panel to the canvas | GL `popInOnClose: true` |
+| FR-A2 | Dock-back to canvas | Docking a popped-out panel back to the canvas is manual: via Golden Layout's native pop-in button in the popped-out window, or by reopening the panel from the Panels menu. | G-001 | ROS Developer | Must | Clicking the pop-in control in the popped-out window returns the panel to the canvas | GL `popInOnClose: false` + `checkAddDefaultPopinButton()`; `popInOnClose:true` auto-close-dock was dropped due to erratic behavior on passive panels |
 | FR-A3 | Pop-out on all panels | Every pop-out-capable panel, including ROS Status, exposes pop-out. | G-001 | ROS Developer | Must | ROS Status pops out to a working window | |
 | FR-A4 | Preserve live content | Pop-out/dock-back keeps a terminal's shell, scrollback, and running processes. | G-002 | ROS Developer | Must | Terminal shows prior output and running process after pop-out and after dock-back | Relies on tmux `?arg=<id>` |
 | FR-A5 | Sub-window bootstrap | The child window renders only the popped panel on first open and on refresh (no full chrome). | G-001,G-002 | ROS Developer | Must | Refreshing the popped window keeps showing only that panel | Guard `layout.isSubWindow`; skip `loadLayout` |
@@ -273,7 +275,7 @@ README + BRD/PRD updates; note behavior changes to pop-out.
 | Q-1 | Multi-user now (per-user isolation) or single-user with a clear extension path? | jmservera | 2026-07-19 | Resolved: single-user now; schema reserves a user key for later isolation |
 | Q-2 | Config store: client-only localStorage vs server-side via control service? Which settings are per-browser vs system? | jmservera | 2026-07-19 | Resolved: server-side via control service for system settings; per-browser prefs may stay in localStorage |
 | Q-3 | Which settings must the first config dialog expose beyond affinity? | jmservera | 2026-07-19 | Resolved: default layout, simulator GPU adapter, theme, auth-mode display, affinity/grouping toggle, plus reset-to-defaults |
-| Q-4 | Dock-back UX: `popInOnClose`, explicit control, or both? | jmservera | 2026-07-19 | Resolved: auto-dock on close (`popInOnClose`) |
+| Q-4 | Dock-back UX: `popInOnClose`, explicit control, or both? | jmservera | 2026-07-19 | Resolved: manual pop-in control (`popInOnClose: false` + `checkAddDefaultPopinButton()`); revised 2026-07-20 — auto-dock-on-close was erratic on passive panels |
 | Q-5 | Affinity granularity: simple on/off vs general per-type grouping policy? | jmservera | 2026-07-19 | Resolved: per-type grouping policy; only terminals grouped now, other panels ungrouped |
 | Q-6 | Copilot token at rest: volume perms sufficient or encryption required before non-localhost exposure? | jmservera | 2026-07-19 | Resolved: volume perms now + documented risk; encryption required before non-localhost/multi-user |
 

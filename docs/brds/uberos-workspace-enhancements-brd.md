@@ -144,8 +144,9 @@ to software rendering on WSL2 Intel GPUs, making Gazebo slow.
 
 ### Future State
 
-- Native pop-out moves a panel into its own window and closing that window auto-docks it back;
-  terminals keep their shell and scrollback because the reconnect reattaches the same tmux session.
+- Native pop-out moves a panel into its own window and dock-back is manual — via the window's
+  native pop-in control or reopening the panel from the menu; terminals keep their shell and
+  scrollback because the reconnect reattaches the same tmux session.
 - Terminals only ever share a stack with other terminals; the grouping policy is configurable.
 - A configuration dialog edits system settings that persist across reloads and restarts.
 - Any panel can be collapsed and easily restored.
