@@ -79,11 +79,12 @@ body,
   opacity: 1;
 }
 
-/* A popped-out panel renders this same app in a subwindow; hide the menu bar
-   there so the detached panel fills the window (FR-A5, BR-002). */
-body.uberos-subwindow .uberos-titlebar {
-  display: none;
-}
+/* Pop-out (sub-window) chrome: the titlebar/menubar is omitted from the DOM in
+   sub-window mode (see the {#if !isSubWindow} guard in App.svelte), so no CSS
+   hide rule is needed here. The `uberos-subwindow` body class remains set in
+   onMount as a hook for any future sub-window-only styling. The pop-in control
+   (GL's native `.lm_popin`, added via checkAddDefaultPopinButton in onMount) is
+   styled by the imported goldenlayout base/dark-theme CSS. */
 
 .panel-body {
   padding: 0.75rem;
