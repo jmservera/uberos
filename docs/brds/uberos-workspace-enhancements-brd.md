@@ -8,7 +8,7 @@ ms.topic: concept
 
 # UbeROS Workspace Enhancements BRD
 
-Version 0.2.0 | Status Draft | Owner jmservera | Related [Workspace Management BRD](./uberos-workspace-management-brd.md) · [uberos-init PRD](../prds/uberos-init.md) · [Workspace Enhancements PRD](../prds/uberos-workspace-enhancements.md)
+Version 0.3.0 | Status Draft | Owner jmservera | Related [Workspace Management BRD](./uberos-workspace-management-brd.md) · [uberos-init PRD](../prds/uberos-init.md) · [Workspace Enhancements PRD](../prds/uberos-workspace-enhancements.md)
 
 ## Progress Tracker
 
@@ -63,6 +63,7 @@ to software rendering on WSL2 Intel GPUs, making Gazebo slow.
 | Predictable layouts | Terminals should group only with terminals so docking stays sensible. |
 | Persistent developer context | Editor login/config and system settings must survive restarts. |
 | Performance on target hardware | Gazebo should use the Intel Iris Xe GPU on WSL2, not software rendering. |
+| Observability and recoverability | The UI must load early, show service health, and let users recover a failing service without reading compose logs. |
 | Multi-user readiness | Persistence choices must not preclude per-user isolation later. |
 
 ## 3. Business Objectives and Success Metrics
@@ -76,6 +77,7 @@ to software rendering on WSL2 Intel GPUs, making Gazebo slow.
 | BO-5 | Persistent editor identity | code-server keeps settings, extensions, and the Copilot login between sessions | Lost every restart | Persisted, scoped to the user | Must |
 | BO-6 | GPU-accelerated simulation on WSL2 | Gazebo renders on the Intel Iris Xe GPU under `compose.override.wsl.yaml` | Software (llvmpipe) fallback | GPU renderer confirmed, or documented blocker | Should |
 | BO-7 | Collapsible panels | Every panel can be minimized/collapsed and easily restored | No collapse control | Collapse/expand on every panel | Must |
+| BO-8 | Resilient ingress and visible health | The UI and control plane load without waiting for heavy services; per-service health is visible and a failing service is recoverable from the UI | Proxy waits for all services; no health view; stuck service leaves a blank UI | Ingress depends only on control+frontend; health shown; restart from the UI | Must |
 
 ## 4. Stakeholders and Roles
 
@@ -102,6 +104,9 @@ to software rendering on WSL2 Intel GPUs, making Gazebo slow.
 - Research spike: Gazebo GPU acceleration on WSL2 with the Intel Iris Xe, plus implementation if
   a working path is found.
 - Panel minimize/collapse: every panel can be collapsed and easily restored.
+- Resilient ingress and health visibility: the single proxy comes up on the control plane and SPA
+  alone, resolves the remaining backends lazily, and the GUI shows per-service health with a
+  restart affordance.
 
 ### Out of Scope
 
@@ -139,14 +144,18 @@ to software rendering on WSL2 Intel GPUs, making Gazebo slow.
 
 ### Future State
 
-- Native pop-out moves a panel into its own window and closing that window auto-docks it back;
-  terminals keep their shell and scrollback because the reconnect reattaches the same tmux session.
+- Native pop-out moves a panel into its own window and dock-back is manual — via the window's
+  native pop-in control or reopening the panel from the menu; terminals keep their shell and
+  scrollback because the reconnect reattaches the same tmux session.
 - Terminals only ever share a stack with other terminals; the grouping policy is configurable.
 - A configuration dialog edits system settings that persist across reloads and restarts.
 - Any panel can be collapsed and easily restored.
 - code-server keeps its user data, extensions, and Copilot login across sessions, stored so it
   can later be isolated per user.
 - Gazebo uses the Intel GPU on WSL2, or the blocker is documented with a recommended path.
+- The single ingress and the operational control plane come up promptly even while heavy services
+  are still starting; the canvas shows each service's health and lets the user restart a failing
+  one, instead of a blank page that forces reading `docker compose logs`.
 
 ## 7. Business Requirements
 
@@ -290,6 +299,40 @@ Acceptance criteria:
 > and whether the headless X server the GUI uses reaches the same GPU. Cross-reference
 > [docs/specs/03-intel-openvino-research.md](../specs/03-intel-openvino-research.md).
 
+### 7.7 Theme G — Resilient ingress and service health visibility
+
+Technical finding: the reverse proxy currently declares `depends_on` with `condition:
+service_healthy` for ros, vnc, editor, frontend, and control, so the single ingress does not start
+until every backend is healthy. Because nginx resolves the `upstream` hostnames at config-load
+time, a backend that is not yet running would otherwise stop nginx from starting at all, which is
+why the hard gate exists. The side effect is a chicken-and-egg failure: the operational control
+plane exists to restart unhealthy services (BR-007), but the only way to reach it (the proxy) will
+not come up until those services are already healthy, so a stuck service cannot be recovered from
+the UI and the user sees nothing but must read `docker compose logs`. The fix is to make the
+ingress depend only on the control plane and the SPA, resolve the remaining backends lazily at
+request time (`resolver 127.0.0.11` + variable `proxy_pass`), and surface per-service health
+(already available from the control `/services` endpoint) in the GUI with a restart affordance.
+
+| ID | Requirement | Priority |
+|----|-------------|----------|
+| BR-RI-1 | The single ingress must start and serve the SPA and the control plane as soon as the frontend and control services are healthy, without waiting for ros, simulator, vnc, or editor. | Must |
+| BR-RI-2 | A backend that is still starting or unhealthy must not prevent the ingress from starting; its route returns a graceful "service starting/unavailable" response instead. | Must |
+| BR-RI-3 | The GUI must show each managed service's health, refreshed as services come up. | Must |
+| BR-RI-4 | From the health view, a user can restart an unhealthy service and recover its panel without a full-stack restart. | Should |
+
+Acceptance criteria:
+
+- With ros/simulator/vnc/editor still starting, the canvas loads and the health view shows their
+  status; the SPA and control plane are reachable throughout.
+- Forcing a backend to stay down still boots the proxy; that panel shows a clear message and the
+  service can be restarted from the health view, after which the panel recovers.
+- The SPA and control routes remain reachable regardless of any single backend's state.
+
+> Note: nginx variable `proxy_pass` changes URI/path handling, so each proxied route
+> (`/control/`, `/editor/`, `/ros`, `/novnc`, `/terminal`) needs its rewrite semantics preserved
+> and tested. The SPA and control routes stay statically resolved (hard dependencies). Design is
+> captured in the follow-on PRD (Theme G, FR-G1..FR-G4).
+
 ## 8. Dependencies and Constraints
 
 - Golden Layout v2 native pop-out relies on the child window loading the same app bundle at the
@@ -300,6 +343,9 @@ Acceptance criteria:
   topology and the secret-handling rules.
 - WSL GPU work is host-specific (Windows + WSL2 + Docker Desktop) and must not regress the
   native-Linux or NVIDIA overlays.
+- The resilient-ingress change relies on nginx runtime DNS (`resolver 127.0.0.11`) and variable
+  `proxy_pass` for the non-critical backends; the SPA and control plane stay statically resolved so
+  the shell always loads.
 
 ## 9. Open Questions
 
