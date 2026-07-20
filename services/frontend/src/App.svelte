@@ -170,8 +170,14 @@
       // With affinity on, the new-terminal + shows only on terminal-only stacks
       // (FR-B3); with affinity off, any stack containing a terminal shows it.
       const showAdd = terminalAffinity ? terminalOnly : hasTerminal;
+      const existing = controls.querySelector('.' + ADD_BTN_CLASS);
 
-      if (showAdd && !controls.querySelector('.' + ADD_BTN_CLASS)) {
+      if (!showAdd) {
+        existing?.remove();
+        return;
+      }
+
+      if (!existing) {
         controls.appendChild(
           makeHeaderButton(ADD_BTN_CLASS, '＋', 'New terminal', (e) => {
             e.stopPropagation();
