@@ -567,9 +567,9 @@
       authEnabled = cfg.auth && cfg.auth !== 'off' && cfg.auth !== 'none';
     });
 
-    // Load persisted system settings and apply their effects (Theme C). Skip in
-    // pop-out sub-windows, which only render a single detached panel.
-    if (!isSub) loadSettings();
+    // Load persisted system settings and apply their effects (Theme C).
+    // Apply even in pop-out sub-windows so the theme stays consistent.
+    loadSettings();
 
     const onResize = () => layout.updateSize();
     window.addEventListener('resize', onResize);
