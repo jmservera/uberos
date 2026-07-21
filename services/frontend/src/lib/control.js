@@ -35,6 +35,19 @@ export async function getServices() {
   }
 }
 
+// Installed simulators + live state for the data-driven Simulators menu
+// (FR-A2/FR-A3). Each entry is the registry contract (id, label, service,
+// transport, panelRoute, rosIntegration, autostart, enabled) plus a live
+// `state`. Falls back to an empty list if the control plane is unreachable.
+export async function getSimulators() {
+  try {
+    const { simulators } = await json('/simulators');
+    return simulators ?? [];
+  } catch {
+    return [];
+  }
+}
+
 // Restart a single service (BR-007). Resolves when Docker reports the restart
 // was issued; the caller polls getServices() to reflect recovery.
 export async function restartService(name) {

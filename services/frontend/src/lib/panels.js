@@ -67,6 +67,45 @@ export function buildSimulatorPanel(el) {
   el.appendChild(makeIframe(PANEL_DEFS.simulator.url));
 }
 
+// --- Data-driven simulator panels (FR-A3) ------------------------------
+// A simulator registry entry (from GET /control/simulators) maps to a Golden
+// Layout panel whose stream URL is chosen by transport: `vnc` → noVNC iframe,
+// `gzweb` → gzweb websocket client. Both are served under the entry's
+// panelRoute through the single proxy origin, so the SPA needs no per-simulator
+// code — adding a registry entry is enough to render its panel (NFR-MAINT-1).
+const SIMULATOR_TRANSPORTS = {
+  vnc: (route) => `${route}vnc.html?autoconnect=true&resize=scale`,
+  gzweb: (route) => route,
+};
+
+// Resolve a registry entry to the absolute-safe, transport-specific stream path
+// (still proxy-relative; makeIframe/absoluteUrl finalize the origin).
+export function simulatorStreamUrl(entry) {
+  const resolve = SIMULATOR_TRANSPORTS[entry?.transport];
+  return resolve ? resolve(entry.panelRoute) : entry?.panelRoute;
+}
+
+// Build a Golden Layout panel definition from a simulator registry entry. The
+// component type is namespaced (`sim:<id>`) so multiple simulators coexist
+// without colliding with the built-in panels, and the launch wiring (Theme B)
+// can register a factory per entry from this same shape.
+export function simulatorPanelDef(entry) {
+  return {
+    componentType: `sim:${entry.id}`,
+    title: entry.label,
+    url: simulatorStreamUrl(entry),
+    transport: entry.transport,
+    popout: true,
+    singleton: true,
+  };
+}
+
+// Panel content builder for a data-driven simulator panel: an iframe to the
+// entry's transport-resolved stream, routed through the single proxy origin.
+export function buildSimulatorPanelForEntry(el, entry) {
+  el.appendChild(makeIframe(simulatorStreamUrl(entry)));
+}
+
 // Resolve a stable tmux session id for a terminal panel and persist it in the
 // Golden Layout component state. The id travels with the panel across docking,
 // saved layouts, and pop-outs, so the /terminal/?arg=<id> connection always
