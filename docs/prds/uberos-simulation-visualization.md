@@ -1,7 +1,7 @@
 <!-- markdownlint-disable-file -->
 <!-- markdown-table-prettify-ignore-start -->
 # UbeROS Simulation and Visualization - Product Requirements Document (PRD)
-Version 0.1.0 | Status Draft | Owner jmservera | Team Squad | Target Next iteration | Lifecycle Draft
+Version 1.0.0 | Status Approved | Owner jmservera | Team Squad | Target Next iteration | Lifecycle Approved
 
 ## Progress Tracker
 | Phase | Done | Gaps | Updated |
@@ -9,11 +9,11 @@ Version 0.1.0 | Status Draft | Owner jmservera | Team Squad | Target Next iterat
 | Context | 90% | Derived from the Simulation & Visualization BRD (all open questions resolved) | 2026-07-21 |
 | Problem & Users | 85% | Personas confirmed; educator journey light | 2026-07-21 |
 | Scope | 90% | Separate-container, concurrent, persistent, build-selectable confirmed | 2026-07-21 |
-| Requirements | 80% | FR/NFR drafted across six themes; acceptance criteria drafted | 2026-07-21 |
-| Metrics & Risks | 70% | <300ms target set; gzweb-on-Ionic feasibility is the main risk | 2026-07-21 |
-| Operationalization | 70% | Compose profiles + control-plane lifecycle drafted; create-vs-start open | 2026-07-21 |
-| Finalization | 0% | Awaiting owner validation | 2026-07-21 |
-Unresolved Critical Questions: 2 | TBDs: 2
+| Requirements | 90% | FR/NFR across six themes incl. auto-start (FR-B8) + ros-image cleanup (FR-E6) | 2026-07-21 |
+| Metrics & Risks | 90% | gzweb path confirmed for Ionic; client=minimal, pairing kilted/ionic locked | 2026-07-21 |
+| Operationalization | 90% | Lifecycle resolved: profile + allowlisted start/stop; configurable auto-start, default both on | 2026-07-21 |
+| Finalization | 100% | Approved 2026-07-21; all questions resolved; ready for implementation | 2026-07-21 |
+Unresolved Critical Questions: 0 | TBDs: 0
 
 ## 1. Executive Summary
 ### Context
@@ -100,11 +100,17 @@ Terminal panel; reload the browser and both panels reconnect to the still-runnin
 * Init constraints hold: single ingress, backend ports internal, single-user now with multi-user not precluded.
 ### Decisions (resolved from the BRD, 2026-07-21)
 * **Web client:** Gazebo uses [gazebo-web/gzweb](https://github.com/gazebo-web/gzweb); VNC is retired for Gazebo but kept for Turtlesim.
+* **Web-viz path (spike-confirmed):** the Gazebo container runs a **WebSocket server** that streams *scene state* (protobuf over WebSocket, default **port 9002**) and the browser renders it **client-side with Three.js** via the `gzweb` `SceneManager` — not a server pixel stream. On **Ionic** the server is the `gz-launch` `WebsocketServer` plugin (`gz launch <file>.gzlaunch`); on **Jetty** it is the `gz-sim` `WebsocketServer` *system* in the world SDF (gz-launch is deprecated). See [the spike](../../.copilot-tracking/research/2026-07-21/gzweb-web-visualization-feasibility-research.md).
+* **Client scope:** a **minimal** self-hosted page built on the `gzweb` library with a config-injected WebSocket URL — not the full Angular `gazebosim-app`.
+* **Camera sensors:** in-sim camera-sensor `image` topics are **out of scope** for this iteration (they would reintroduce a server-side GL/render requirement).
+* **Version pairing:** stay on the current working pair **ROS `kilted` + Gazebo `ionic`**. Lyrical/Jetty is the ideal target but is blocked today: `ghcr.io/openrobotics/gazebo:${GZ_RELEASE}-full` is built on Ubuntu **noble**, which has no Lyrical apt sources, so `ros-lyrical-ros-gz` cannot install on it. A future migration would **invert the image** — base the Gazebo container on a **ROS (`ros:lyrical-*`) image and install Gazebo Jetty there** — then move to Lyrical/Jetty and the `gz-sim` `WebsocketServer` system (tracked as a follow-up, see Q-7).
 * **Containers:** one container/service per simulator (Gazebo = `gzweb` websocket; Turtlesim = VNC), launched on demand.
 * **Lifecycle:** simulators run server-side and survive a browser reload; the panel reconnects.
 * **Concurrency:** multiple simulators may run at once.
 * **Bridged topics:** only `/clock` (`rosgraph_msgs/Clock`) by default; per-world bridges added later.
 * **Bridge placement:** `ros_gz_bridge` runs co-located with `gz sim`; `gz sim` never joins DDS directly (only the bridge does).
+* **Lifecycle & auto-start:** simulators are compose services the control plane starts/stops at runtime (allowlisted); per-simulator **auto-start** at stack up is **configurable** and **defaults to both Gazebo and Turtlesim on**.
+* **`ros` image cleanup:** drop the redundant `ros-gz` from the `ros` image — the bridge lives only in the Gazebo container.
 ### Constraints
 * Single reverse proxy; simulator ports never host-published.
 * Control-plane Docker operations stay minimal and allowlisted (list + start/stop/restart only; no create/exec via the socket — see NFR-SEC-2).
@@ -140,10 +146,10 @@ flowchart LR
     TSP[noVNC panel]
   end
   SPA -->|/control/ REST| PX[Nginx single ingress]
-  GZP -->|/gzweb/ static + ws| PX
+  GZP -->|/gzweb/ static + /gzweb/ws| PX[Nginx single ingress]
   TSP -->|/sim/turtlesim/novnc ws| PX
   PX --> CTL[control service<br/>docker.sock: list/start/stop]
-  PX --> GZB[gzweb ws bridge]
+  PX --> GZB[WebsocketServer :9002<br/>scene state protobuf]
   PX --> TVNC[websockify/noVNC]
 
   subgraph gazebo service
@@ -171,13 +177,21 @@ exists to prevent. Consequence: the **Gazebo image needs `ros-gz`** (already ins
 entrypoint must **source `/opt/ros/${ROS_DISTRO}`** and carry the DDS discovery config; the **ros
 image's `ros-gz` becomes redundant** for the bridge (keep only if a ROS-side consumer needs
 `ros_gz_interfaces`).
-
+### Gazebo web visualization path (spike-confirmed)
+The [gzweb feasibility spike](../../.copilot-tracking/research/2026-07-21/gzweb-web-visualization-feasibility-research.md)
+confirmed the modern Gazebo web path **streams scene state** (poses, scene graph, assets as
+protobuf over WebSocket on **:9002**) and **renders client-side with Three.js** — it is *not* a
+server pixel stream. Implications for UbeROS:
+* **Headless `gz sim -s` suffices** for the 3D world view; no server GPU/GL context is required (the browser renders). The only exception is in-sim **camera-sensor `image` topics**, which still need server-side rendering — out of scope unless required (Open Question Q-5).
+* **Server:** on Ionic, the `gz-launch` `WebsocketServer` plugin; on Jetty, the `gz-sim` `WebsocketServer` system (same wire protocol and client).
+* **Client:** self-host the `gazebo-web/gzweb` NPM client (`SceneManager`, Three.js) as static assets with a **configurable WebSocket URL** pointing at the proxied endpoint — the public docs assume the externally-hosted `app.gazebosim.org` client, which cannot be used in a proxy-only internal stack. Self-hosting the client with a configurable WS URL is the real engineering cost here (see R-1).
+* Because state (not pixels) crosses the wire, the **< 300ms target is realistic** and should beat the ~1s VNC baseline; measure through the proxy on the target host.
 ## 7. Functional Requirements
 
 ### 7.1 Theme A — Pluggable simulator framework
 | FR ID | Requirement | Goals | Priority | Acceptance |
 |-------|-------------|-------|----------|-----------|
-| FR-A1 | Define a **simulator registry** (server-side, e.g. `services/control` config) where each entry declares: `id`, `label`, compose `service`, `transport` (`gzweb`\|`vnc`), `panelRoute` (proxy path for the stream), `rosIntegration` (`native`\|`ros_gz`), and `enabled`. | G-001 | Must | A registry lists Gazebo and Turtlesim; a third example entry can be added with no core-code change. |
+| FR-A1 | Define a **simulator registry** (server-side, e.g. `services/control` config) where each entry declares: `id`, `label`, compose `service`, `transport` (`gzweb`\|`vnc`), `panelRoute` (proxy path for the stream), `rosIntegration` (`native`\|`ros_gz`), `autostart`, and `enabled`. | G-001 | Must | A registry lists Gazebo and Turtlesim; a third example entry can be added with no core-code change. |
 | FR-A2 | The control plane exposes `GET /control/simulators` returning the installed simulators and their live state. | G-001,G-002 | Must | The endpoint returns both simulators with `state`. |
 | FR-A3 | The frontend menu and panel set are **data-driven** from `GET /simulators` (no per-simulator hard-coding in the SPA). | G-001 | Must | Adding a registry entry makes it appear in the menu without SPA edits. |
 | FR-A4 | Each launched simulator joins the shared `ROS_DOMAIN_ID` via the discovery server (no multicast). | G-005 | Must | Launched simulators appear on the shared domain. |
@@ -195,15 +209,16 @@ surfaces in the menu by registration alone; launching either makes it ROS-visibl
 | FR-B5 | Multiple simulators may run **concurrently**; the menu tracks each independently. | G-007 | Must | Gazebo and Turtlesim run together; each is stoppable independently. |
 | FR-B6 | **Server-side lifecycle**: a launched simulator keeps running across a browser reload; reopening its panel reconnects to the running stream without restarting the sim. | G-007 | Must | After reload, both panels reconnect to still-running sims. |
 | FR-B7 | Control-plane start/stop is restricted to an **allowlist** of simulator services (same hardening as service-restart); no container create/exec is issued via the Docker socket. | G-002 | Must | A non-allowlisted name is rejected with 403; only start/stop/restart Docker ops are used. |
+| FR-B8 | Each simulator's **auto-start** at stack up is **configurable** (per-simulator `autostart`); the default auto-starts **both** Gazebo and Turtlesim. Whether auto-started or not, every simulator stays start/stoppable from the menu. | G-002,G-007 | Must | A default `up` launches both; setting a simulator's `autostart` off leaves it stopped until launched from the menu. |
 
 Acceptance criteria: the menu launches/stops each installed simulator; two run at once; a reload
 reconnects both; disallowed names are rejected.
 
-> Operational note (Open Question Q-2): simulator services are declared in compose under a
-> `simulators` profile so they are **created but not auto-started** at `docker compose up`; the
-> control plane only ever **starts/stops** them. The exact "created-but-stopped" mechanism (profile
-> + `--no-start`/`create`, an idle placeholder, or adding a narrow allowlisted create) is decided
-> at the implementation design gate.
+> Operational note (Q-2, resolved): simulator services are declared in compose under a
+> `simulators` profile; the control plane starts/stops them at runtime (allowlisted). Whether a
+> simulator **auto-starts** at `docker compose up` is **configurable per simulator** (`autostart` in
+> the registry / a `UBEROS_SIMULATORS_AUTOSTART` list), and the **default auto-starts both Gazebo
+> and Turtlesim**. The control plane uses only list/start/stop/restart Docker ops — no create/exec.
 
 ### 7.3 Theme C — Turtlesim visualizer
 | FR ID | Requirement | Goals | Priority | Acceptance |
@@ -229,6 +244,7 @@ reconnects both; disallowed names are rejected.
 | FR-E3 | The bridge reaches ROS via the **Fast DDS discovery server** (unicast, no multicast); gz-transport stays intra-container. | G-005 | Must | Bridge topics discovered without multicast. |
 | FR-E4 | The Gazebo entrypoint **sources `/opt/ros/${ROS_DISTRO}`** and provides the DDS discovery config (`ROS_DISCOVERY_SERVER` or the XML profile). | G-005 | Must | The bridge starts and registers with the discovery server. |
 | FR-E5 | `ROS_DISTRO` and `GZ_RELEASE` are pinned to a **compatible pair** so `ros-gz` installs cleanly on the Gazebo base image. | G-005 | Must | Build installs one Gazebo version; no dependency conflict. |
+| FR-E6 | Remove the now-redundant `ros-gz` from the **`ros` image** (the bridge runs only in the Gazebo container). | G-005 | Should | The `ros` image no longer installs `ros-gz`; the bridge still works from the Gazebo container. |
 
 Acceptance criteria: after launching Gazebo, `ros2 topic list` shows `/clock` and the ROS Status
 panel reflects the simulator; no multicast is required.
@@ -236,11 +252,11 @@ panel reflects the simulator; no multicast is required.
 ### 7.6 Theme F — Gazebo native web visualization (`gzweb`)
 | FR ID | Requirement | Goals | Priority | Acceptance |
 |-------|-------------|-------|----------|-----------|
-| FR-F1 | The Gazebo container runs **headless `gz sim` (server mode)** plus the **`gzweb` websocket bridge**; no Xvfb/VNC in the Gazebo path. | G-006 | Must | Gazebo runs without Xvfb/x11vnc; the ws bridge is up. |
-| FR-F2 | The `gzweb` client (static assets) and its websocket are served **behind the single proxy** (new `/gzweb/` route + ws upgrade). | G-006 | Must | The client loads and connects over the proxy; no host-published port. |
+| FR-F1 | The Gazebo container runs **headless `gz sim` (server mode)** plus a **WebSocket server** that streams scene state (on Ionic: the `gz-launch` `WebsocketServer` plugin; on Jetty: the `gz-sim` `WebsocketServer` system). No Xvfb/VNC and no server GL context in the Gazebo path. | G-006 | Must | Gazebo runs without Xvfb/x11vnc; the WebSocket server is up on :9002. |
+| FR-F2 | The self-hosted **minimal `gzweb` client** (static page on the `gzweb` library, config-injected WebSocket URL) and its websocket are served **behind the single proxy** (`/gzweb/` static + `/gzweb/ws/` upgrade to `:9002`). | G-006 | Must | The client loads and connects over the proxy; no host-published port. |
 | FR-F3 | The Gazebo panel loads the `gzweb` client and behaves like other panels (dock, pop-out, collapse). | G-006 | Should | The panel docks/pops-out/collapses. |
 | FR-F4 | The **VNC path is removed for Gazebo** (the old `simulator` + `vnc` sidecar Gazebo pipeline is retired/replaced); VNC is retained only for Turtlesim and future GUI simulators. | G-006 | Must | Gazebo no longer depends on x11vnc/noVNC; Turtlesim still does. |
-| FR-F5 | Interaction lag on the Gazebo web path is **under 300ms**, with physics compute server-side (GPU-eligible). | G-006 | Must | Measured lag < 300ms in the target environment. |
+| FR-F5 | Interaction lag on the Gazebo web path is **under 300ms**; scene state (not pixels) is streamed and physics compute stays server-side (GPU-eligible, but not GL-required). | G-006 | Must | Measured lag < 300ms in the target environment. |
 
 Acceptance criteria: launching Gazebo shows the world in a `gzweb` panel (not VNC), interaction
 works from the browser, the Gazebo pipeline has no x11vnc/noVNC dependency, and measured lag < 300ms.
@@ -269,6 +285,7 @@ works from the browser, the Gazebo pipeline has no x11vnc/noVNC dependency, and 
   "transport": "gzweb",
   "panelRoute": "/gzweb/",
   "rosIntegration": "ros_gz",
+  "autostart": true,
   "enabled": true
 }
 ```
@@ -280,6 +297,7 @@ works from the browser, the Gazebo pipeline has no x11vnc/noVNC dependency, and 
   "transport": "vnc",
   "panelRoute": "/sim/turtlesim/novnc/",
   "rosIntegration": "native",
+  "autostart": true,
   "enabled": true
 }
 ```
@@ -295,11 +313,12 @@ State values: `available` (installed, not running), `starting`, `running`, `stop
 ### Proxy routes (additions)
 | Route | Upstream | Notes |
 |-------|----------|-------|
-| `/gzweb/` | `gazebo:<port>` | Static `gzweb` client + websocket upgrade (`Upgrade`/`Connection`). |
+| `/gzweb/` | `gazebo:<static>` | Self-hosted `gzweb` client (static assets, config-injected WS URL). |
+| `/gzweb/ws/` | `gazebo:9002` | Scene-state WebSocket (`Upgrade`/`Connection`), streamed from the `WebsocketServer`. |
 | `/sim/turtlesim/novnc/` | `turtlesim:6080` | noVNC + websockify, same pattern as today's `/novnc/`. |
 
 ### Compose services (shape)
-* `gazebo` — build on `gazebo:${GZ_RELEASE}-full` + `ros-${ROS_DISTRO}-ros-gz` + `gzweb`; entrypoint sources ROS, runs headless `gz sim -s`, the `gzweb` ws bridge, and `ros_gz_bridge` (with `/clock`). On `ros_net` + `web_net`. Profile `simulators`.
+* `gazebo` — build on `gazebo:${GZ_RELEASE}-full` + `ros-${ROS_DISTRO}-ros-gz` + the self-hosted `gzweb` static client; entrypoint sources ROS, runs headless `gz sim -s`, the WebSocket server (`gz launch` `WebsocketServer` on Ionic / `gz-sim` `WebsocketServer` system on Jetty, :9002), and `ros_gz_bridge` (with `/clock`). On `ros_net` + `web_net`. Profile `simulators`.
 * `turtlesim` — build on `ros:${ROS_DISTRO}-ros-base` + `ros-${ROS_DISTRO}-turtlesim` + Xvfb/x11vnc/websockify/openbox; entrypoint runs Xvfb, `turtlesim_node`, x11vnc, websockify. On `ros_net` + `web_net`. Profile `simulators`.
 * The legacy `simulator` + `vnc` services are retired once `gazebo`/`turtlesim` land (FR-F4).
 
@@ -316,8 +335,8 @@ State values: `available` (installed, not running), `starting`, `running`, `stop
 ## 11. Risks & Mitigations
 | Risk ID | Description | Severity | Likelihood | Mitigation |
 |---------|-------------|---------|-----------|-----------|
-| R-1 | `gzweb` may not have a build matching the pinned `GZ_RELEASE` (Ionic), or its websocket API differs. | High | Medium | Spike `gzweb` on the target Gazebo version first; fallbacks: pin `GZ_RELEASE` to a `gzweb`-supported release, or use `gz launch` websocket server + Gazebo web client. |
-| R-2 | The < 300ms lag target may not hold under software rendering / limited bandwidth. | Medium | Medium | Measure early; `gzweb` sends scene/state not pixels, so it should beat VNC; tune update rates; document result like the VNC lag spike. |
+| R-1 | The self-hosted `gzweb` client must be bundled with a **configurable WebSocket URL** pointing at the proxied endpoint; the public docs assume the externally-hosted `app.gazebosim.org` client, which cannot be used in a proxy-only internal stack. | High | Medium | Build the `gazebo-web/gzweb` NPM client into a static bundle with a config-injected WS URL (`/gzweb/ws/`); reference `gazebosim-app` and the gz-sim `examples/scripts/websocket_server` sample; confirm `gz-launch-websocket-server` ships in the base image or apt-install it. |
+| R-2 | The < 300ms lag target may not hold under limited bandwidth. | Medium | Low | `gzweb` streams scene state (not pixels), so it should beat VNC; measure early through the proxy; tune update rates; serve meshes/assets locally through the proxy to cut initial load. |
 | R-3 | Adding container start/stop expands the socket-privileged control plane's surface. | Medium | Low | Keep to allowlisted start/stop/restart only; no create/exec; reuse existing validation. |
 | R-4 | `ROS_DISTRO`/`GZ_RELEASE` drift pulls a second Gazebo via apt, breaking the image. | Medium | Medium | Pin a compatible pair (FR-E5); assert one Gazebo version at build. |
 | R-5 | Concurrent simulators increase CPU/GPU load on modest hosts. | Low | Medium | On-demand launch (idle = off, NFR-RES-1); document resource expectations. |
@@ -325,7 +344,7 @@ State values: `available` (installed, not running), `starting`, `running`, `stop
 ## 12. Operational Considerations
 | Aspect | Requirement | Notes |
 |--------|------------|-------|
-| Deployment | Simulator services created (not auto-started) under a `simulators` profile | Control plane starts/stops on demand |
+| Deployment | Simulator services under a `simulators` profile; per-simulator `autostart` (default both on) | Control plane starts/stops on demand thereafter |
 | Rollback | Keep the legacy `simulator`/`vnc` path until `gazebo`/`turtlesim` pass acceptance | Retire in FR-F4 once green |
 | Monitoring | Reuse control-plane state derivation for simulators | Menu shows per-sim state |
 | Resource | Idle simulators consume nothing | NFR-RES-1 |
@@ -345,17 +364,22 @@ Recommendation: spike **R-1 (`gzweb` on the pinned Gazebo release)** before Phas
 ## 14. Open Questions
 | Q ID | Question | Owner | Status |
 |------|----------|-------|--------|
-| Q-1 | Which `gzweb`/web client + Gazebo release pairing is adopted, and exactly how is it served (`/gzweb/` static + ws upstream/port)? | jmservera/Squad | Open (spike R-1) |
-| Q-2 | Control-plane lifecycle mechanism: compose `simulators` profile created-but-stopped + allowlisted start/stop, an idle placeholder, or a narrow allowlisted create? | Squad | Open |
+| Q-1 | Which `gzweb`/web client + Gazebo release pairing is adopted, and exactly how is it served (`/gzweb/` static + ws upstream/port)? | jmservera/Squad | Resolved by spike: self-hosted `gazebo-web/gzweb` client + `WebsocketServer` on :9002 behind `/gzweb/` + `/gzweb/ws/`; keep Ionic now, plan Jetty (LTS) later. |
+| Q-2 | Control-plane lifecycle mechanism and auto-start. | Squad | Resolved: compose `simulators` profile + allowlisted control-plane start/stop; per-simulator `autostart` **configurable**, default **both on**. |
 | Q-3 | Default `ros_gz` bridge set beyond `/clock` once a robot/world is introduced. | Squad | Deferred (per-world) |
-| Q-4 | Do we keep `ros-gz` in the `ros` image (for `ros_gz_interfaces` consumers) or drop it as redundant? | Squad | Open |
+| Q-4 | Do we keep `ros-gz` in the `ros` image (for `ros_gz_interfaces` consumers) or drop it as redundant? | Squad | Resolved: **drop it** from the `ros` image (FR-E6). |
+| Q-5 | Are in-sim **camera-sensor `image` feeds** in scope? They reintroduce a server-side GL/rendering requirement for those topics. | jmservera | Resolved: **out of scope** this iteration. |
+| Q-6 | Client choice: a minimal custom page on the `gzweb` library, or the full Angular `gazebosim-app`? | Squad | Resolved: **minimal** custom page on the `gzweb` library. |
+| Q-7 | Is a **Jetty** migration acceptable now, or stay on Ionic? | jmservera | Resolved: **stay kilted/ionic** (current working pair). Lyrical/Jetty is blocked because the `openrobotics/gazebo` image (Ubuntu noble) has no Lyrical apt sources; a future migration must **invert the image** (ROS base + install Gazebo Jetty). Tracked as a follow-up. |
 
 ## 15. References & Provenance
 | Ref | Source | Use |
 |-----|--------|-----|
 | BRD | [Simulation and Visualization BRD](../brds/uberos-simulation-visualization-brd.md) | Requirements source |
 | Enhancements BRD | [Workspace Enhancements BRD](../brds/uberos-workspace-enhancements-brd.md) | Gazebo GPU/VNC lag spike (Theme E) |
-| gzweb | https://github.com/gazebo-web/gzweb | Gazebo web client |
+| gzweb | https://github.com/gazebo-web/gzweb | Gazebo web client (`SceneManager`, Three.js) |
+| gzweb spike | [gzweb feasibility research](../../.copilot-tracking/research/2026-07-21/gzweb-web-visualization-feasibility-research.md) | Confirmed scene-state path, components, verdict |
+| gazebosim-app | https://github.com/gazebo-web/gazebosim-app | Reference web client (app.gazebosim.org) |
 | Gazebo web viz | https://gazebosim.org/docs/ionic/web_visualization/ | Web visualization docs |
 | ROS 2 integration | https://gazebosim.org/docs/ionic/ros2_overview/ | `ros_gz` bridge |
 | Turtlesim | https://docs.ros.org/en/lyrical/Tutorials/Beginner-CLI-Tools/Introducing-Turtlesim/Introducing-Turtlesim.html | Turtlesim intro |
