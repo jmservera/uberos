@@ -215,6 +215,13 @@ services:
       # Services the system menu is allowed to restart (BR-007). The control
       # plane itself, the proxy, and discovery-server are intentionally excluded.
       UBEROS_SERVICES: ${UBEROS_SERVICES:-ros,gazebo,editor,frontend}
+      # Installed simulators exposed by the registry (FR-A1) and which of them
+      # auto-start at stack up (FR-B8). UBEROS_SIMULATORS defaults to the whole
+      # catalog; UBEROS_SIMULATORS_AUTOSTART, when unset, honors each entry's
+      # registry `autostart` flag (default both on). The control plane starts/
+      # stops these on demand and reconciles autostart intent at boot.
+      UBEROS_SIMULATORS: ${UBEROS_SIMULATORS:-gazebo,turtlesim}
+      UBEROS_SIMULATORS_AUTOSTART: ${UBEROS_SIMULATORS_AUTOSTART:-}
       # Surfaced to the SPA so it knows whether to show Logout (BR-008).
       UBEROS_AUTH: ${UBEROS_AUTH:-off}
       # Path to the persisted system settings store (Theme C, FR-C2). Lives on
