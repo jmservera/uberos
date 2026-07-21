@@ -61,6 +61,27 @@ Settings live in `.env` (committed defaults contain no secrets):
 | `UBEROS_AUTH` | `off` | Set to `basic` to enable proxy authentication |
 | `UBEROS_SERVICES` | `ros,simulator,vnc,editor,frontend` | Services the system menu may reset |
 
+### Simulator selection (build-time)
+
+Which simulators build and appear is controlled by two coordinated settings in
+`.env` (defaults install and show **both** Gazebo and Turtlesim):
+
+- `COMPOSE_PROFILES` — build-time selection. Each simulator has its own compose
+  profile (`sim-gazebo`, `sim-turtlesim`) plus the umbrella `simulators` (all).
+  Only a simulator whose profile is active is built and created as a service.
+- `UBEROS_SIMULATORS` — registry/menu gating; which entries the menu offers.
+
+Set them in tandem so an excluded simulator drops from both the built services
+and the menu:
+
+| Selection | `COMPOSE_PROFILES` | `UBEROS_SIMULATORS` |
+|---|---|---|
+| Both (default) | `simulators` | *(unset)* |
+| Gazebo only | `sim-gazebo` | `gazebo` |
+| Turtlesim only | `sim-turtlesim` | `turtlesim` |
+
+Verify a selection with `docker compose config --services`.
+
 ### GPU acceleration (opt-in)
 
 NVIDIA (Linux + NVIDIA Container Toolkit):
