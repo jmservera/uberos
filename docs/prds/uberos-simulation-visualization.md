@@ -382,7 +382,7 @@ Recommendation: spike **R-1 (`gzweb` on the pinned Gazebo release)** before Phas
 | gazebosim-app | https://github.com/gazebo-web/gazebosim-app | Reference web client (app.gazebosim.org) |
 | Gazebo web viz | https://gazebosim.org/docs/ionic/web_visualization/ | Web visualization docs |
 | ROS 2 integration | https://gazebosim.org/docs/ionic/ros2_overview/ | `ros_gz` bridge |
-| Turtlesim | https://docs.ros.org/en/lyrical/Tutorials/Beginner-CLI-Tools/Introducing-Turtlesim/Introducing-Turtlesim.html | Turtlesim intro |
+| Turtlesim | https://docs.ros.org/en/kilted/Tutorials/Beginner-CLI-Tools/Introducing-Turtlesim/Introducing-Turtlesim.html | Turtlesim intro |
 | Control plane | [services/control/server.js](../../services/control/server.js) | Lifecycle extension point |
 | Panels registry | [services/frontend/src/lib/panels.js](../../services/frontend/src/lib/panels.js) | Data-driven panels |
 | Proxy | [services/proxy/nginx.conf](../../services/proxy/nginx.conf) | Route additions |
