@@ -4,7 +4,7 @@
 - **Research snapshot:** commit `3d2d4629352fdea8acba94c4fe40a2a7808bd21f`
 - **Canonical spec:** [`docs/specs/01-Init.md`][spec-url] (blob `b34760996abe7a4e61a4ef9d9db15e6eecb4e6ac`)
 - **Research date:** 2026-07-17
-- **Canonical ROS Kilted page:** <https://docs.ros.org/en/kilted/Releases/Release-Kilted-Luth.html>
+- **Canonical ROS Kilted page:** <https://docs.ros.org/en/kilted/Releases/Release-Kilted-Kaiju.html>
 
 > **Note:** This report is implementation guidance for the canonical spec. The canonical spec remains the source of truth for scope and success criteria.
 
@@ -723,7 +723,7 @@ vnc:
 
 **Pattern A — Recommended for Init: rosbridge_suite with roslibjs**[^rosbridge]
 
-- **Server package:** `ros-ionic-rosbridge-suite` or `ros-kilted-rosbridge-suite`; Kilted availability is a SPIKE-A gate.
+- **Server package:** `ros-jazzy-rosbridge-suite` or `ros-kilted-rosbridge-suite`; Kilted availability is a SPIKE-A gate.
 - **Internal port:** `9090`, never published to the host.
 - **Client:** `roslib` v2.1.0, ESM and TypeScript compatible, requiring Node.js 20 or later.
 - **Install command:** `npm install roslib`.
@@ -1650,7 +1650,7 @@ The spec criteria need the following sharpenings for automation.[^test-audit]
 | Repository or URL | Purpose | Research status |
 |---|---|---|
 | `jmservera/uberos` at `3d2d4629` | Primary repository | Verified[^spec-url] |
-| <https://docs.ros.org/en/kilted/Releases/Release-Kilted-Luth.html> | Canonical Kilted release notes supplied by the user | Verified[^kilted-page] |
+| <https://docs.ros.org/en/kilted/Releases/Release-Kilted-Kaiju.html> | Canonical Kilted release notes supplied by the user | Verified[^kilted-page] |
 | <https://hub.docker.com/v2/repositories/library/ros/tags?name=kilted-ros-base> | Docker Hub API for the Kilted base tag | Verified[^kilted-base] |
 | <https://github.com/openrobotics/gz_oci_images> | Current Gazebo container registry | Verified[^ionic-img] |
 | <https://raw.githubusercontent.com/gazebosim/docs/master/tools/versions.md> | Gazebo version and EOL table | Verified[^gz-eol] |
@@ -1665,7 +1665,7 @@ The spec criteria need the following sharpenings for automation.[^test-audit]
 | `gazebosim/gz-fuel-tools` | Fuel cache configuration | Reviewed |
 | `.squad/agents/neo/history.md:15-21` | Gazebo Docker deprecation evidence | Verified[^spec-neo-hist] |
 | <https://docs.docker.com/compose/how-tos/networking/> | Compose networking and namespace behavior | Verified |
-| <https://docs.ros.org/en/ionic/Tutorials/Advanced/Improved-Dynamic-Discovery.html> | ROS 2 DDS discovery configuration | Verified |
+| <https://docs.ros.org/en/kilted/Tutorials/Advanced/Improved-Dynamic-Discovery.html> | ROS 2 DDS discovery configuration | Verified |
 
 [spec-url]: https://github.com/jmservera/uberos/blob/3d2d4629352fdea8acba94c4fe40a2a7808bd21f/docs/specs/01-Init.md "UbeROS spec 01-Init.md at 3d2d4629"
 
@@ -1675,7 +1675,7 @@ The spec criteria need the following sharpenings for automation.[^test-audit]
 
 [^spec-r]: Spec §8 research questions R1–R10 at L112–L121. Evidence correction MC-3 identifies R1 at L112 and R10 at L121.
 
-[^kilted-page]: ROS Kilted Kaiju release page: <https://docs.ros.org/en/kilted/Releases/Release-Kilted-Luth.html>, fetched 2026-07-17. It confirms EventsCBGExecutor, AsyncNode, `rosidl::Buffer`, YAML type annotations, fish shell support through `source /opt/ros/kilted/setup.fish`, and the 2026-05-22 release date.
+[^kilted-page]: ROS Kilted Kaiju release page: <https://docs.ros.org/en/kilted/Releases/Release-Kilted-Kaiju.html>, fetched 2026-07-17. It confirms EventsCBGExecutor, AsyncNode, `rosidl::Buffer`, YAML type annotations, fish shell support through `source /opt/ros/kilted/setup.fish`, and the 2026-05-22 release date.
 
 [^kilted-base]: Docker Hub v2 API for `ros:kilted-ros-base`: tag alias `kilted-ros-base-resolute`, active status, amd64 digest `sha256:9c352f94…`, arm64 digest `sha256:714c24a5…`, and `last_pushed` 2026-07-16. MC-1 identifies Ubuntu 26.04 “Resolute,” not Noble 24.04. Source: <https://hub.docker.com/v2/repositories/library/ros/tags?name=kilted-ros-base&page_size=5>.
 
@@ -1713,7 +1713,7 @@ The spec criteria need the following sharpenings for automation.[^test-audit]
 
 [^dds-multicast]: Docker bridge networking guidance: <https://docs.docker.com/engine/network/drivers/bridge/>. DDS default subnet discovery relies on multicast, which is not available across the proposed bridge topology without explicit configuration. Compose platform research record `a6cf09:§3.2` documents the resulting silent ROS discovery failure.
 
-[^dds-domain]: ROS 2 domain ID guidance: <https://docs.ros.org/en/ionic/Concepts/Intermediate/About-Domain-ID.html>. IDs 0–101 and 215–232 avoid Linux ephemeral-port collisions; `42` is safe across the target platforms.
+[^dds-domain]: ROS 2 domain ID guidance: <https://docs.ros.org/en/kilted/Concepts/Intermediate/About-Domain-ID.html>. IDs 0–101 and 215–232 avoid Linux ephemeral-port collisions; `42` is safe across the target platforms.
 
 [^gpu-macos]: Docker Desktop GPU guidance: <https://docs.docker.com/desktop/features/gpu/>. GPU support is available only on Windows with the WSL2 backend; macOS cannot pass a GPU through to containers.
 

@@ -15,14 +15,15 @@ ENV ROS_DISTRO=${ROS_DISTRO}
 
 # Register the official ROS package repository (packages.ros.org) so the
 # ros-gz bridge packages resolve. Uses the signed-by keyring convention.
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         ca-certificates \
         curl \
         gnupg \
     && curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key \
-        -o /usr/share/keyrings/ros-archive-keyring.gpg \
-    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu $(. /etc/os-release && echo $VERSION_CODENAME) main" \
+        | gpg --dearmor -o /usr/share/keyrings/ros-archive-keyring.gpg \
+    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") main" \
         > /etc/apt/sources.list.d/ros2.list \
     && rm -rf /var/lib/apt/lists/*
 
