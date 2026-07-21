@@ -17,6 +17,36 @@ test.describe('S9 - per-service reset', () => {
     }
   });
 
+  test('control plane lists installed simulators with lifecycle state', async ({ request }) => {
+    const res = await request.get('/control/simulators');
+    expect(res.status()).toBe(200);
+
+    const { simulators } = await res.json();
+    expect(Array.isArray(simulators)).toBe(true);
+
+    const allowedStates = new Set([
+      'available',
+      'starting',
+      'running',
+      'stopped',
+      'failed',
+      'unknown',
+    ]);
+
+    for (const sim of simulators) {
+      expect(typeof sim.id).toBe('string');
+      expect(typeof sim.label).toBe('string');
+      expect(typeof sim.service).toBe('string');
+      expect(typeof sim.transport).toBe('string');
+      expect(typeof sim.panelRoute).toBe('string');
+      expect(typeof sim.rosIntegration).toBe('string');
+      expect(typeof sim.autostart).toBe('boolean');
+      expect(typeof sim.enabled).toBe('boolean');
+      expect(typeof sim.state).toBe('string');
+      expect(allowedStates.has(sim.state), `${sim.id} state`).toBe(true);
+    }
+  });
+
   test('restarting one service recovers it and leaves others running', async ({ request }) => {
     // Editor is the least disruptive service to bounce.
     const target = 'editor';
