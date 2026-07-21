@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!--
+  Fast DDS Discovery Server client profile (turtlesim service).
+
+  Docker bridge networks do not reliably carry the multicast traffic that
+  default DDS discovery relies on, which causes ROS nodes in separate
+  containers to silently fail to find each other (research RISK-4).
+
+  This profile points turtlesim_node at the central discovery-server so
+  node/topic discovery works over unicast. It mirrors the ros/simulator
+  services' profile so /turtle1/cmd_vel and /turtle1/pose join the shared
+  ROS graph natively (PRD FR-C3).
+-->
+<dds xmlns="http://www.eprosima.com/XMLSchemas/fastRTPS_Profiles">
+  <profiles>
+    <participant profile_name="uberos_discovery_client" is_default_profile="true">
+      <rtps>
+        <builtin>
+          <discovery_config>
+            <discoveryProtocol>CLIENT</discoveryProtocol>
+            <discoveryServersList>
+              <!-- Fast DDS 3.x (ROS Kilted): discoveryServersList children are
+                   <locator> elements directly. The pre-3.x
+                   <RemoteServer prefix="GUID"> form was removed and makes the
+                   parser treat the list as empty ("without content"). -->
+              <locator>
+                <udpv4>
+                  <address>discovery-server</address>
+                  <port>11811</port>
+                </udpv4>
+              </locator>
+            </discoveryServersList>
+          </discovery_config>
+        </builtin>
+      </rtps>
+    </participant>
+  </profiles>
+</dds>
