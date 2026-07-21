@@ -8,11 +8,13 @@
 
 ## Context
 
-UbeROS needs a ROS 2 baseline distribution. The candidates are Kilted Kaiju
-(Ubuntu 26.04, Gazebo Ionic, support to ~May 2031), Jazzy Jalisco (Ubuntu 24.04,
+UbeROS needs a ROS 2 baseline distribution. The candidates are Lyrical Luth
+(Ubuntu 26.04, Gazebo Jetty, support to ~May 2031), Jazzy Jalisco (Ubuntu 24.04,
 Gazebo Harmonic, proven ecosystem to ~May 2029), and Humble (nearing EOL).
-Kilted offers the longest runway but its ecosystem package coverage
+Lyrical offers the longest runway but its ecosystem package coverage
 (`rosbridge-suite`, `ros-gz`) was unverified at research time.
+
+During development we found out that the Jetty image is using Ubuntu Noble, which is not supported by ROS 2 Lyrical, so we had to fall back to Jazzy Jalisco. The Gazebo Ionic image is supported by Jazzy and Lyrical, so it is the preferred Gazebo baseline.
 
 ## Decision
 
