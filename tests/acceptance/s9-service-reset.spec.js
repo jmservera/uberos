@@ -6,14 +6,25 @@ import { SERVICES, healthSnapshot } from '../helpers/stack.js';
 
 test.describe('S9 - per-service reset', () => {
   test('control plane lists resettable services with health', async ({ request }) => {
+    const cfg = await request.get('/control/config');
+    expect(cfg.status()).toBe(200);
+    const { services: allowlist } = await cfg.json();
+    expect(Array.isArray(allowlist)).toBe(true);
+
     const res = await request.get('/control/services');
     expect(res.status()).toBe(200);
     const { services } = await res.json();
     expect(Array.isArray(services)).toBe(true);
+
     const names = services.map((s) => s.name);
-    // The allowlist excludes the control plane, proxy, and discovery server.
-    for (const svc of ['ros', 'simulator', 'vnc', 'editor', 'frontend']) {
-      expect(names).toContain(svc);
+    // /control/services should reflect exactly the allowlisted resettable names.
+    expect(names.sort()).toEqual([...allowlist].sort());
+
+    for (const svc of services) {
+      expect(typeof svc.name).toBe('string');
+      expect(typeof svc.state).toBe('string');
+      expect(typeof svc.status).toBe('string');
+      expect(typeof svc.health).toBe('string');
     }
   });
 
