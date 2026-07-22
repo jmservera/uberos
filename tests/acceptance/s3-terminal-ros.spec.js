@@ -12,7 +12,7 @@ test.describe('S3 - ROS command in a browser terminal', () => {
     expect(res.status()).toBe(200);
   });
 
-  test('ROS graph exposes /rosout via rosbridge within 5s', async ({ page }) => {
+  test('ROS graph stream is reachable via rosbridge', async ({ page }) => {
     // Load a same-origin page so the browser WebSocket can reach ws://host/ros.
     await page.goto('/');
 
@@ -29,14 +29,14 @@ test.describe('S3 - ROS command in a browser terminal', () => {
         const timer = setTimeout(() => done(false), 5000);
 
         ws.onopen = () => {
-          // rosapi ships with rosbridge; list topics and look for /rosout.
-          ws.send(JSON.stringify({ op: 'call_service', service: '/rosapi/topics', id: 's3' }));
+          // Subscribing to /rosout verifies the browser can stream ROS graph
+          // data through rosbridge over the proxy-routed websocket.
+          ws.send(JSON.stringify({ op: 'subscribe', topic: '/rosout', id: 's3' }));
         };
         ws.onmessage = (event) => {
           try {
             const msg = JSON.parse(event.data);
-            const topics = msg?.values?.topics;
-            if (Array.isArray(topics) && topics.includes('/rosout')) {
+            if (msg?.op === 'publish' && msg?.topic === '/rosout') {
               clearTimeout(timer);
               done(true);
             }
@@ -46,6 +46,6 @@ test.describe('S3 - ROS command in a browser terminal', () => {
       });
     });
 
-    expect(found, '/rosout should be visible on the ROS graph via rosbridge').toBe(true);
+    expect(found, 'rosbridge should stream /rosout messages from the ROS graph').toBe(true);
   });
 });

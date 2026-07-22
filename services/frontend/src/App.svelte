@@ -13,7 +13,7 @@
     LAYOUT_PRESETS,
     LAYOUTS,
   } from './lib/panels.js';
-  import { getConfig, getServices, restartService, getSettings, saveSettings } from './lib/control.js';
+  import { getConfig, getServices, getSimulators, restartService, getSettings, saveSettings } from './lib/control.js';
 
   const LAYOUT_KEY = 'uberos.layout.v1';
   const LAYOUT_KEYS = Object.keys(LAYOUTS);
@@ -48,6 +48,12 @@
   let authEnabled = false;
   let services = []; // [{ name, state, health }]
   let serviceBusy = null;
+  // Installed simulators + live state, data-driven from GET /control/simulators
+  // (FR-A3). Read-only in Theme A; launch/stop actions land in Theme B.
+  let simulators = []; // [{ id, label, service, transport, panelRoute, ..., state }]
+  let simulatorsLoading = false;
+  let simulatorsLoaded = false;
+  let simulatorsError = '';
   let statusMsg = '';
   let statusTimer;
 
@@ -419,6 +425,19 @@
     services = await getServices();
   }
 
+  // Load the installed simulators and their live state for the Simulators menu
+  // (FR-A3). Purely data-driven — the list reflects whatever the registry
+  // returns, so a new registry entry appears here with no SPA edits.
+  async function refreshSimulators() {
+    simulatorsLoading = true;
+    simulatorsError = '';
+    const result = await getSimulators();
+    simulators = result.simulators;
+    simulatorsLoaded = true;
+    simulatorsLoading = false;
+    if (!result.ok) simulatorsError = result.error;
+  }
+
   // Reset/restart an individual service without a full stack restart (BR-007).
   async function restart(name) {
     serviceBusy = name;
@@ -447,6 +466,7 @@
   function toggleMenu(name) {
     activeMenu = activeMenu === name ? null : name;
     if (activeMenu === 'services') refreshServices();
+    if (activeMenu === 'simulators') refreshSimulators();
   }
 
   function closeMenu() {
@@ -695,6 +715,39 @@
         {/if}
       </div>
 
+      <!-- Simulators: data-driven from GET /control/simulators (FR-A3). Read-only
+           in Theme A — launch/stop actions arrive in Theme B. -->
+      <div class="menu-group">
+        <button
+          class="menu-button"
+          class:open={activeMenu === 'simulators'}
+          aria-haspopup="true"
+          aria-expanded={activeMenu === 'simulators'}
+          on:click|stopPropagation={() => toggleMenu('simulators')}
+        >Simulators ▾</button>
+        {#if activeMenu === 'simulators'}
+          <div class="menu-dropdown wide" role="menu">
+            <p class="menu-heading">Installed simulators</p>
+            {#if simulatorsLoading}
+              <p class="menu-empty">Loading simulators…</p>
+            {:else if simulatorsError}
+              <p class="menu-empty">Unable to load simulators ({simulatorsError}).</p>
+            {:else if simulatorsLoaded && simulators.length === 0}
+              <p class="menu-empty">No simulators installed in this build.</p>
+            {/if}
+            {#each simulators as sim (sim.id)}
+              <div class="menu-service">
+                <span class="status-dot {sim.state === 'running' ? 'ok' : sim.state === 'failed' ? 'err' : 'warn'}"></span>
+                <span class="svc-name">{sim.label}</span>
+                <span class="sim-state">{sim.state}</span>
+                <!-- Launch/stop are Theme B; shown disabled to mark the seam. -->
+                <button class="svc-reset" disabled title="Launch/stop lands in Theme B">Launch</button>
+              </div>
+            {/each}
+          </div>
+        {/if}
+      </div>
+
       <!-- Configuration: open the system settings dialog (FR-C1). -->
       <button
         class="menu-button"
@@ -916,6 +969,12 @@
   .menu-service .svc-name {
     flex: 1;
     font-size: 0.82rem;
+  }
+
+  .menu-service .sim-state {
+    font-size: 0.72rem;
+    color: var(--uberos-muted, #a6adc8);
+    text-transform: capitalize;
   }
 
   .svc-reset {

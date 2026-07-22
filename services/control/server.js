@@ -25,6 +25,7 @@ import http from 'node:http';
 import { Buffer } from 'node:buffer';
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { dirname } from 'node:path';
+import { installedSimulators } from './simulators.js';
 
 const DOCKER_SOCKET = process.env.DOCKER_SOCKET || '/var/run/docker.sock';
 const DOCKER_API = process.env.DOCKER_API_VERSION || 'v1.43';
@@ -200,6 +201,43 @@ async function serviceStatus() {
   });
 }
 
+// Collapse a Docker container's raw State/Status into the simulator lifecycle
+// vocabulary the PRD defines (§7.1): available (installed but not launched),
+// starting, running, stopped, failed, unknown. Derived read-only from the same
+// container list serviceStatus() uses — no launch/stop here (that is Theme B).
+function simulatorState(container) {
+  if (!container) return 'available';
+  const state = container.State ?? '';
+  const status = container.Status ?? '';
+  if (state === 'running') {
+    if (/\(health: starting\)/.test(status)) return 'starting';
+    if (/\(unhealthy\)/.test(status)) return 'failed';
+    return 'running';
+  }
+  if (state === 'created' || state === 'restarting') return 'starting';
+  if (state === 'exited') return /Exited \(0\)/.test(status) ? 'stopped' : 'failed';
+  if (state === 'dead') return 'failed';
+  return 'unknown';
+}
+
+// Installed simulators (FR-A1) enriched with live container state (FR-A2).
+// Maps each entry's compose `service` to a container via listProjectContainers()
+// exactly like serviceStatus(); a missing container reads as `available`.
+async function simulatorStatus() {
+  let containers = new Map();
+  let dockerReachable = true;
+  try {
+    containers = await listProjectContainers();
+  } catch {
+    // Report the registry with unknown state rather than failing the menu.
+    dockerReachable = false;
+  }
+  return installedSimulators().map((sim) => ({
+    ...sim,
+    state: dockerReachable ? simulatorState(containers.get(sim.service)) : 'unknown',
+  }));
+}
+
 function sendJson(res, status, payload) {
   const body = JSON.stringify(payload);
   res.writeHead(status, {
@@ -230,6 +268,12 @@ const server = http.createServer(async (req, res) => {
 
     if (req.method === 'GET' && path === '/services') {
       return sendJson(res, 200, { services: await serviceStatus() });
+    }
+
+    // Installed simulators + live state (FR-A2). Read-only; launch/stop lands
+    // in Theme B. Mirrors the /services shape so the SPA menu stays uniform.
+    if (req.method === 'GET' && path === '/simulators') {
+      return sendJson(res, 200, { simulators: await simulatorStatus() });
     }
 
     // System settings store (Theme C). GET returns the persisted settings (or
