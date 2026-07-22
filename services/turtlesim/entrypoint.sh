@@ -21,7 +21,10 @@ for _ in $(seq 1 30); do
   fi
   sleep 0.5
 done
-
+if ! xdpyinfo -display "${DISPLAY_NUM}" >/dev/null 2>&1; then
+  echo "Xvfb did not become ready on ${DISPLAY_NUM}; see /tmp/xvfb.log" >&2
+  exit 1
+fi
 # Source the ROS environment. ROS setup scripts reference unbound variables
 # (e.g. AMENT_TRACE_SETUP_FILES), so relax nounset while sourcing, then restore.
 set +u
