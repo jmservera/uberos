@@ -25,11 +25,12 @@ test.describe('S7 - system menu manages the workspace', () => {
   });
 
   test('simulators menu loads entries or a clear empty-state', async ({ page }) => {
-    await page.getByRole('button', { name: /Simulators/ }).click();
-
-    // Initial fetch may show a transient loading state; ensure it settles.
-    await expect(page.getByText(/Loading simulators…/)).not.toBeVisible({ timeout: 15_000 });
-
+    const loading = page.getByText(/Loading simulators…/);
+    await Promise.all([
+      page.waitForResponse((r) => r.url().includes('/control/simulators') && r.status() === 200),
+      page.getByRole('button', { name: /Simulators/ }).click(),
+    ]);
+    await expect(loading).toBeHidden({ timeout: 15_000 });
     const simRows = page.locator('.menu-group .menu-service');
     const count = await simRows.count();
     if (count > 0) {
