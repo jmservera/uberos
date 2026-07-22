@@ -58,15 +58,14 @@ x11vnc \
   >/tmp/x11vnc.log 2>&1 &
 
 # Forward termination to the turtlesim node for a clean shutdown.
-# websockify runs in the background so the trap survives (exec would replace
-# the shell and discard it).
-trap 'kill -TERM "${TURTLE_PID}" 2>/dev/null || true' TERM INT
-
-# Serve noVNC static assets and bridge WebSocket -> VNC on :6080.
+# Keep websockify in the background so PID 1 can trap TERM/INT and stop both processes.
 websockify \
   --web /usr/share/novnc/ \
   --heartbeat 30 \
   6080 \
   localhost:5900 &
+WEBSOCKIFY_PID=$!
 
-wait -n
+trap 'kill -TERM "${TURTLE_PID}" "${WEBSOCKIFY_PID}" 2>/dev/null || true' TERM INT
+
+wait -n "${TURTLE_PID}" "${WEBSOCKIFY_PID}"
