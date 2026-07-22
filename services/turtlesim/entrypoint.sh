@@ -58,11 +58,15 @@ x11vnc \
   -bg
 
 # Forward termination to the turtlesim node for a clean shutdown.
+# websockify runs in the background so the trap survives (exec would replace
+# the shell and discard it).
 trap 'kill -TERM "${TURTLE_PID}" 2>/dev/null || true' TERM INT
 
-# Serve noVNC static assets and bridge WebSocket -> VNC on :6080 (foreground).
-exec websockify \
+# Serve noVNC static assets and bridge WebSocket -> VNC on :6080.
+websockify \
   --web /usr/share/novnc/ \
   --heartbeat 30 \
   6080 \
-  localhost:5900
+  localhost:5900 &
+
+wait -n
