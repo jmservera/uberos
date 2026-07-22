@@ -95,7 +95,7 @@ export function buildSimulatorPanel(el) {
 // code — adding a registry entry is enough to render its panel (NFR-MAINT-1).
 const SIMULATOR_TRANSPORTS = {
   vnc: (route) =>
-    `${ensureTrailingSlash(route)}vnc.html?autoconnect=true&resize=scale&path=${noVncWebsockifyPath(route)}`,
+    `${ensureTrailingSlash(route)}vnc.html?autoconnect=true&resize=scale&path=${encodeURIComponent(noVncWebsockifyPath(route))}`,
   gzweb: (route) => route,
 };
 
