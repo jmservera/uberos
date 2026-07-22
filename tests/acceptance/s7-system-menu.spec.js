@@ -21,6 +21,22 @@ test.describe('S7 - system menu manages the workspace', () => {
     await expect(page.getByRole('button', { name: /Panels/ })).toBeVisible();
     await expect(page.getByRole('button', { name: /Layouts/ })).toBeVisible();
     await expect(page.getByRole('button', { name: /Services/ })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Simulators/ })).toBeVisible();
+  });
+
+  test('simulators menu loads entries or a clear empty-state', async ({ page }) => {
+    await page.getByRole('button', { name: /Simulators/ }).click();
+
+    // Initial fetch may show a transient loading state; ensure it settles.
+    await expect(page.getByText(/Loading simulators…/)).not.toBeVisible({ timeout: 15_000 });
+
+    const simRows = page.locator('.menu-group .menu-service');
+    const count = await simRows.count();
+    if (count > 0) {
+      await expect(simRows.first()).toBeVisible();
+    } else {
+      await expect(page.getByText(/No simulators installed in this build\./)).toBeVisible();
+    }
   });
 
   test('closing then reopening a panel restores it (BR-001/BR-005)', async ({ page }) => {

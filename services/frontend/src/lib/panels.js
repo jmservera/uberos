@@ -16,6 +16,21 @@ function absoluteUrl(path) {
   return new URL(path, window.location.origin).href;
 }
 
+// Only allow proxy-relative routes from the simulator registry. This prevents
+// accidental cross-origin iframe loads if a malformed entry ever contains an
+// absolute URL.
+function proxyRelative(route) {
+  if (typeof route !== 'string') return '/';
+  const trimmed = route.trim();
+  if (!trimmed.startsWith('/')) return '/';
+  if (trimmed.startsWith('//')) return '/';
+  return trimmed;
+}
+
+function ensureTrailingSlash(route) {
+  return route.endsWith('/') ? route : `${route}/`;
+}
+
 function makeIframe(src) {
   const frame = document.createElement('iframe');
   frame.className = 'panel-frame';
@@ -74,15 +89,16 @@ export function buildSimulatorPanel(el) {
 // panelRoute through the single proxy origin, so the SPA needs no per-simulator
 // code — adding a registry entry is enough to render its panel (NFR-MAINT-1).
 const SIMULATOR_TRANSPORTS = {
-  vnc: (route) => `${route}vnc.html?autoconnect=true&resize=scale`,
+  vnc: (route) => `${ensureTrailingSlash(route)}vnc.html?autoconnect=true&resize=scale`,
   gzweb: (route) => route,
 };
 
 // Resolve a registry entry to the absolute-safe, transport-specific stream path
 // (still proxy-relative; makeIframe/absoluteUrl finalize the origin).
 export function simulatorStreamUrl(entry) {
+  const route = proxyRelative(entry?.panelRoute);
   const resolve = SIMULATOR_TRANSPORTS[entry?.transport];
-  return resolve ? resolve(entry.panelRoute) : entry?.panelRoute;
+  return resolve ? resolve(route) : route;
 }
 
 // Build a Golden Layout panel definition from a simulator registry entry. The
