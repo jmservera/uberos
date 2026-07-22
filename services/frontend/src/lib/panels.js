@@ -31,6 +31,11 @@ function ensureTrailingSlash(route) {
   return route.endsWith('/') ? route : `${route}/`;
 }
 
+function noVncWebsockifyPath(route) {
+  const normalized = ensureTrailingSlash(route).replace(/^\/+/, '');
+  return `${normalized}websockify`;
+}
+
 function makeIframe(src) {
   const frame = document.createElement('iframe');
   frame.className = 'panel-frame';
@@ -89,7 +94,8 @@ export function buildSimulatorPanel(el) {
 // panelRoute through the single proxy origin, so the SPA needs no per-simulator
 // code — adding a registry entry is enough to render its panel (NFR-MAINT-1).
 const SIMULATOR_TRANSPORTS = {
-  vnc: (route) => `${ensureTrailingSlash(route)}vnc.html?autoconnect=true&resize=scale`,
+  vnc: (route) =>
+    `${ensureTrailingSlash(route)}vnc.html?autoconnect=true&resize=scale&path=${noVncWebsockifyPath(route)}`,
   gzweb: (route) => route,
 };
 
