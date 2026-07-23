@@ -4,7 +4,6 @@ import { execFileSync } from 'node:child_process';
 
 const PORT = process.env.UBEROS_PORT || '8080';
 const BASE = process.env.UBEROS_BASE_URL || `http://localhost:${PORT}`;
-const expectTurtlesim = process.env.UBEROS_EXPECT_TURTLESIM === '1';
 
 let failed = false;
 
@@ -32,12 +31,7 @@ const routes = [
   ['/healthz', [200]],
   ['/', [200]],
   ['/gzweb/', [200]],
-  [
-    '/sim/turtlesim/novnc/',
-    expectTurtlesim
-      ? [200]
-      : [200, 502],
-  ],
+  ['/sim/turtlesim/novnc/', [200]],
   ['/terminal/', [200]],
   ['/editor/', [200, 302]],
 ];
