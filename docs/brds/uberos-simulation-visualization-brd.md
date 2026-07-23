@@ -163,6 +163,9 @@ simulator from participating in ROS workflows.
 
 ### Future State
 
+The simulator launch menu and per-simulator lifecycle described below are target
+state requirements and are not yet implemented in the current stack.
+
 - A simulator registry describes the available simulators; a launch menu lists them (Gazebo,
   Turtlesim, and future additions) and starts/stops them on demand, showing status.
 - Build configuration selects which simulators are installed, defaulting to Gazebo + Turtlesim.
@@ -174,6 +177,14 @@ simulator from participating in ROS workflows.
   visible to ROS tooling), and renders through the `gzweb` web client rather than VNC, keeping
   compute server-side with interaction lag under 300ms.
 - Each launched simulator is a first-class participant in the ROS 2 graph.
+
+Implementation staging note:
+
+- During Theme A (registry/API foundation), a simulator may be cataloged but
+  temporarily disabled in code until its runtime dependencies (compose service
+  and proxy route) are implemented.
+- For the current Theme A branch, this applies to `turtlesim`: it is listed in
+  the contract but intentionally disabled until Themes B/C land.
 
 ## 7. Business Requirements
 

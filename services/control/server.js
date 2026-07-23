@@ -308,14 +308,16 @@ function simulatorState(container) {
 // exactly like serviceStatus(); a missing container reads as `available`.
 async function simulatorStatus() {
   let containers = new Map();
+  let dockerReachable = true;
   try {
     containers = await listProjectContainers();
   } catch {
     // Report the registry with unknown state rather than failing the menu.
+    dockerReachable = false;
   }
   return installedSimulators().map((sim) => ({
     ...sim,
-    state: containers.size ? simulatorState(containers.get(sim.service)) : 'unknown',
+    state: dockerReachable ? simulatorState(containers.get(sim.service)) : 'unknown',
   }));
 }
 

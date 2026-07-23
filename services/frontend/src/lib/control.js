@@ -38,13 +38,17 @@ export async function getServices() {
 // Installed simulators + live state for the data-driven Simulators menu
 // (FR-A2/FR-A3). Each entry is the registry contract (id, label, service,
 // transport, panelRoute, rosIntegration, autostart, enabled) plus a live
-// `state`. Falls back to an empty list if the control plane is unreachable.
+// `state`.
 export async function getSimulators() {
   try {
     const { simulators } = await json('/simulators');
-    return simulators ?? [];
-  } catch {
-    return [];
+    return { ok: true, simulators: simulators ?? [], error: '' };
+  } catch (error) {
+    return {
+      ok: false,
+      simulators: [],
+      error: error instanceof Error ? error.message : 'control /simulators failed',
+    };
   }
 }
 
