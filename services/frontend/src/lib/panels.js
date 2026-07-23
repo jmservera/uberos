@@ -1,4 +1,5 @@
-import ROSLIB from 'roslib';
+// Use ESM named import for Topic from roslib v2.x instead of the legacy bundle.
+import { Topic } from 'roslib';
 import { onRosStatus, startRos } from './ros.js';
 
 // Panel content builders for the Golden Layout window manager.
@@ -14,6 +15,26 @@ import { onRosStatus, startRos } from './ros.js';
 // or a popped-out window.
 function absoluteUrl(path) {
   return new URL(path, window.location.origin).href;
+}
+
+// Only allow proxy-relative routes from the simulator registry. This prevents
+// accidental cross-origin iframe loads if a malformed entry ever contains an
+// absolute URL.
+function proxyRelative(route) {
+  if (typeof route !== 'string') return '/';
+  const trimmed = route.trim();
+  if (!trimmed.startsWith('/')) return '/';
+  if (trimmed.startsWith('//')) return '/';
+  return trimmed;
+}
+
+function ensureTrailingSlash(route) {
+  return route.endsWith('/') ? route : `${route}/`;
+}
+
+function noVncWebsockifyPath(route) {
+  const normalized = ensureTrailingSlash(route).replace(/^\/+/, '');
+  return `${normalized}websockify`;
 }
 
 function makeIframe(src) {
@@ -79,15 +100,17 @@ export function buildSimulatorPanel(el) {
 // panelRoute through the single proxy origin, so the SPA needs no per-simulator
 // code — adding a registry entry is enough to render its panel (NFR-MAINT-1).
 const SIMULATOR_TRANSPORTS = {
-  vnc: (route) => `${route}vnc.html?autoconnect=true&resize=scale`,
+  vnc: (route) =>
+    `${ensureTrailingSlash(route)}vnc.html?autoconnect=true&resize=scale&path=${encodeURIComponent(noVncWebsockifyPath(route))}`,
   gzweb: (route) => route,
 };
 
 // Resolve a registry entry to the absolute-safe, transport-specific stream path
 // (still proxy-relative; makeIframe/absoluteUrl finalize the origin).
 export function simulatorStreamUrl(entry) {
+  const route = proxyRelative(entry?.panelRoute);
   const resolve = SIMULATOR_TRANSPORTS[entry?.transport];
-  return resolve ? resolve(entry.panelRoute) : entry?.panelRoute;
+  return resolve ? resolve(route) : route;
 }
 
 // Build a Golden Layout panel definition from a simulator registry entry. The
@@ -206,7 +229,7 @@ export function buildRosStatusPanel(el) {
         }
       );
 
-      const rosout = new ROSLIB.Topic({
+      const rosout = new Topic({
         ros,
         name: '/rosout',
         messageType: 'rcl_interfaces/msg/Log',

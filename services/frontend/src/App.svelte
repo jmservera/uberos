@@ -54,6 +54,9 @@
   let simulators = []; // [{ id, label, service, transport, panelRoute, ..., state }]
   let simBusy = null; // id of the simulator whose launch/stop is in flight
   let simPollTimer = null; // polls getSimulators() while the menu is open (FR-B1)
+  let simulatorsLoading = false;
+  let simulatorsLoaded = false;
+  let simulatorsError = '';
   let statusMsg = '';
   let statusTimer;
 
@@ -429,7 +432,13 @@
   // (FR-A3). Purely data-driven — the list reflects whatever the registry
   // returns, so a new registry entry appears here with no SPA edits.
   async function refreshSimulators() {
-    simulators = await getSimulators();
+    simulatorsLoading = true;
+    simulatorsError = '';
+    const result = await getSimulators();
+    simulators = result.simulators;
+    simulatorsLoaded = true;
+    simulatorsLoading = false;
+    if (!result.ok) simulatorsError = result.error;
   }
 
   // Open (or focus) a simulator's panel, routed by transport (FR-B4). Each
@@ -819,10 +828,14 @@
         {#if activeMenu === 'simulators'}
           <div class="menu-dropdown wide" role="menu">
             <p class="menu-heading">Installed simulators</p>
-            {#if simulators.length === 0}
+            {#if simulatorsLoading}
               <p class="menu-empty">Loading simulators…</p>
+            {:else if simulatorsError}
+              <p class="menu-empty">Unable to load simulators ({simulatorsError}).</p>
+            {:else if simulatorsLoaded && simulators.length === 0}
+              <p class="menu-empty">No simulators installed in this build.</p>
             {/if}
-            {#each simulators as sim}
+            {#each simulators as sim (sim.id)}
               <div class="menu-service">
                 <span class="status-dot {sim.state === 'running' ? 'ok' : sim.state === 'failed' ? 'err' : 'warn'}"></span>
                 <span class="svc-name">{sim.label}</span>
