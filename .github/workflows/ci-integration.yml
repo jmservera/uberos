@@ -27,8 +27,13 @@ jobs:
   # ── Build images, start the stack, run smoke + acceptance ──────────────
   build-and-test:
     runs-on: ubuntu-latest
+    env:
+      COMPOSE_PROFILES: simulators
     steps:
       - uses: actions/checkout@v4
+
+      - name: Set compose profiles for CI
+        run: echo "COMPOSE_PROFILES=simulators" >> "$GITHUB_ENV"
 
       - name: Validate compose config
         run: docker compose config --quiet
@@ -51,6 +56,8 @@ jobs:
 
       # ── Smoke tests ──────────────────────────────────────────────────
       - name: Smoke test — service health + proxy routing
+        env:
+          UBEROS_EXPECT_TURTLESIM: "1"
         run: bash tests/smoke.sh
 
       - name: Smoke test — ROS graph
@@ -58,7 +65,7 @@ jobs:
           docker compose exec -T ros bash -lc
           "source /opt/ros/\$ROS_DISTRO/setup.bash && ros2 node list"
 
-      # ── Playwright acceptance tests (S1–S2) ──────────────────────────
+      # ── Playwright acceptance tests (S1, S2, S4) ─────────────────────
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
@@ -72,16 +79,17 @@ jobs:
         working-directory: tests
         run: npx playwright install --with-deps chromium
 
-      - name: Run acceptance tests (S1 + S2)
+      - name: Run acceptance tests (S1 + S2 + S4)
         working-directory: tests
         run: >
           npm test --
           acceptance/s1-stack-health.spec.js
           acceptance/s2-window-manager.spec.js
+          acceptance/s4-novnc-frame.spec.js
 
-      # S3–S9 are integration-heavy (terminal I/O, VNC pixel analysis, service
-      # restarts). They run locally but are not yet enabled in CI. To add them
-      # later, append more spec paths to the command above.
+      # S3 and S5–S9 are still the less stable integration-heavy slice for CI
+      # (terminal I/O, multi-window flows, service restarts). They run locally
+      # but are not yet enabled in GitHub Actions.
 
       - name: Upload Playwright report
         if: failure()

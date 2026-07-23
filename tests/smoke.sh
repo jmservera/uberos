@@ -7,6 +7,7 @@ set -euo pipefail
 
 PORT="${UBEROS_PORT:-8080}"
 BASE="http://localhost:${PORT}"
+EXPECT_TURTLESIM="${UBEROS_EXPECT_TURTLESIM:-0}"
 fail=0
 
 echo "== S1: service health =="
@@ -38,8 +39,12 @@ echo "== proxy routing =="
 check /healthz 200
 check / 200
 check /gzweb/ 200
-# Turtlesim noVNC is profile-gated: 200 when running, 502 when profile is off.
-check /sim/turtlesim/novnc/ 200 502
+if [[ "${EXPECT_TURTLESIM}" == "1" ]]; then
+  check /sim/turtlesim/novnc/ 200
+else
+  # Turtlesim noVNC is profile-gated: 200 when running, 502 when profile is off.
+  check /sim/turtlesim/novnc/ 200 502
+fi
 check /terminal/ 200
 check /editor/ 200 302
 
