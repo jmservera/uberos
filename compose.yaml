@@ -95,7 +95,6 @@ services:
       args:
         GZ_RELEASE: ${GZ_RELEASE:-ionic}
         ROS_DISTRO: ${ROS_DISTRO:-kilted}
-    profiles: ["simulators"]
     depends_on:
       discovery-server:
         condition: service_healthy

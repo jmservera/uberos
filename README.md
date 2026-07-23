@@ -93,6 +93,16 @@ path is used there. Load only one GPU overlay at a time.
 3. `source install/setup.bash`, then `ros2 run <pkg> <node>`.
 4. Observe the result in the **Simulator** and **ROS Status** panels.
 
+### Terminal copy and paste
+
+The embedded terminal runs `ttyd` + `tmux`, so clipboard behavior follows both browser and tmux rules:
+
+* Select text with left-click drag to copy from the terminal view.
+* Right-click pastes the latest tmux buffer into the active shell.
+* To paste from your host clipboard, use your browser/terminal shortcut while the terminal iframe is focused (`Ctrl+Shift+V` on most Linux/Windows setups, `Cmd+V` on macOS).
+
+If a browser blocks clipboard access, use the keyboard shortcut again after granting clipboard permissions for the site.
+
 ## Security
 
 Authentication is off by default for localhost. Before any non-localhost
@@ -114,6 +124,8 @@ stored credentials and forces re-authentication.
 - PRD: [docs/prds/uberos-init.md](docs/prds/uberos-init.md)
 - Decisions: [docs/decisions/](docs/decisions/)
 
-> **Note:** The primary ROS distribution (Kilted) is pending SPIKE-A image and
+> **Note:** The primary ROS distribution (Kilted) passed SPIKE-A image and
 > package verification. See [ADR-001](docs/decisions/ADR-001-ros-distro.md).
-> If verification fails, set `ROS_DISTRO=ionic` and `GZ_RELEASE=harmonic`.
+> Current implementation defaults are `ROS_DISTRO=kilted` and
+> `GZ_RELEASE=ionic`. If a compatibility rollback is needed, set
+> `ROS_DISTRO=jazzy` and `GZ_RELEASE=harmonic`.
