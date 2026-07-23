@@ -34,10 +34,7 @@ const CATALOG = Object.freeze({
     panelRoute: '/sim/turtlesim/novnc/',
     rosIntegration: 'native',
     autostart: true,
-    // Theme A exposes only simulators that are actually installable in the
-    // current deployment. Turtlesim is catalogued but stays off until its
-    // compose service and proxy route land in Themes B/C.
-    enabled: false,
+    enabled: true,
   }),
 });
 

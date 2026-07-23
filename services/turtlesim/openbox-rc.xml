@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Minimal Openbox configuration for the UbeROS turtlesim display.
+  The turtlesim window is undecorated and maximized so the turtle canvas fills
+  the virtual framebuffer and the noVNC panel shows the application instead of a
+  small, unmanaged window on a black desktop.
+-->
+<openbox_config xmlns="http://openbox.org/3.4/rc">
+  <applications>
+    <application class="*">
+      <decor>no</decor>
+      <maximized>yes</maximized>
+      <focus>yes</focus>
+    </application>
+  </applications>
+</openbox_config>

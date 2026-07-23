@@ -1537,7 +1537,7 @@ The spec criteria need the following sharpenings for automation.[^test-audit]
 >
 > - **Probability:** Low; the image existed and was updated regularly at the research date.
 > - **Impact:** High; WP-3 is blocked.
-> - **Mitigation:** Run SPIKE-A P3 and fall back to `osrf/ros:jazzy-simulation` with Harmonic.
+> - **Mitigation:** Run SPIKE-A P3 and fall back to `osrf/ros:ionic-simulation` with Harmonic.
 
 > **Risk:** **RISK-4 — Silent DDS discovery failure**
 >
@@ -1627,7 +1627,7 @@ The spec criteria need the following sharpenings for automation.[^test-audit]
 - Ubuntu 26.04 “Resolute” is Kilted’s base, inferred from the `-resolute` image tag and the ROS biennial LTS cadence; neither the Kilted page nor REP-2000 stated it directly.[^mc1-note]
 - Kilted’s LTS status is a supported inference from the ROS lifecycle horizon and Ionic’s LTS designation, not a REP-2000 declaration.[^ros-eol][^ionic-img]
 - Ogre2 requires OpenGL 3.3 or later and a recent Mesa stack for software rendering.[^ogre2-mesa]
-- `osrf/ros:jazzy-simulation` bundles Gazebo Harmonic and is a viable fallback image.[^ros-docker-hub]
+- `osrf/ros:ionic-simulation` bundles Gazebo Harmonic and is a viable fallback image.[^ros-docker-hub]
 
 ### Low-Confidence Findings
 
@@ -1687,7 +1687,7 @@ The spec criteria need the following sharpenings for automation.[^test-audit]
 
 [^rep2000]: REP-2000 live review on 2026-07-17: <https://www.ros.org/reps/rep-2000.html>. The page covered Humble, Iron, Jazzy, Kilted, and Rolling, then ended after Rolling Ridley. It must not be cited as authority for Kilted’s platform tier or LTS status.
 
-[^ros-gz-pair]: Official ROS and Gazebo pairings: <https://gazebosim.org/docs/latest/ros_installation/>, fetched 2026-07-17. It lists Humble with Fortress, Jazzy with Harmonic vendor packages, Kilted with Ionic, and Rolling with Jetty.
+[^ros-gz-pair]: Official ROS and Gazebo pairings: <https://gazebosim.org/docs/latest/ros_installation/>, fetched 2026-07-17. It lists Humble with Fortress, Jazzy with Harmonic vendor packages, Kilted with Ionic, and Rolling with Ionic.
 
 [^ros-docker-hub]: Official ROS Docker image guidance: <https://hub.docker.com/_/ros>, accessed 2026-07-17. It documents multi-stage builds, distinguishes `ros-base` from `ros-core`, and recommends a `/root/.ros/` volume. Research also recorded `osrf/ros:ionic-simulation` as a roughly 735 MB image bundling Gazebo Harmonic, last pushed 2026-07-17.
 
