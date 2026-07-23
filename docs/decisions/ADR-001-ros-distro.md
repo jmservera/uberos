@@ -14,6 +14,14 @@ Gazebo Harmonic, proven ecosystem to ~May 2029), and Humble (nearing EOL).
 Kilted offers the longest runway but its ecosystem package coverage
 (`rosbridge-suite`, `ros-gz`) was unverified at research time.
 
+During development we confirmed that the Jetty image uses Ubuntu Noble, which blocks the ROS 2 Lyrical package path on that image. Gazebo Ionic remains compatible with both Jazzy and Kilted, so it was retained while the repository baseline stayed on Kilted.
+
+This Jetty-on-Noble limitation is historical context for compatibility decisions.
+The current implemented baseline in this repository is `ROS_DISTRO=kilted` with
+`GZ_RELEASE=ionic` as defined in `compose.yaml`. When documenting compatibility
+constraints, treat Jazzy/Ionic as the explicit fallback pair while the
+Lyrical package path remains blocked on Noble-based Jetty images.
+
 ## Decision
 
 Target **Kilted Kaiju** as the primary baseline, gated by SPIKE-A verification
@@ -37,7 +45,7 @@ Verified 2026-07-17 on Docker Desktop:
 - P2 `ros-kilted-rosapi` — FOUND 4.2.0-1resolute.20260606.
 - P3 Gazebo `ghcr.io/openrobotics/gazebo:ionic-full` — EXISTS (manifest).
 - P4 `ros-kilted-ros-gz` — FOUND 3.0.9-1resolute.20260617.
-- Fallbacks `ros:ionic-ros-base` and `gazebo:harmonic-full` — EXIST.
+- Fallbacks `ros:jazzy-ros-base` and `gazebo:harmonic-full` — EXIST.
 - P5 software rendering inside the Ionic image — not yet run (requires the
   multi-GB `ionic-full` pull); validated later during the WP-3 build.
 

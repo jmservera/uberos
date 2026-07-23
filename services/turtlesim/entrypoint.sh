@@ -21,7 +21,10 @@ for _ in $(seq 1 30); do
   fi
   sleep 0.5
 done
-
+if ! xdpyinfo -display "${DISPLAY_NUM}" >/dev/null 2>&1; then
+  echo "Xvfb did not become ready on ${DISPLAY_NUM}; see /tmp/xvfb.log" >&2
+  exit 1
+fi
 # Source the ROS environment. ROS setup scripts reference unbound variables
 # (e.g. AMENT_TRACE_SETUP_FILES), so relax nounset while sourcing, then restore.
 set +u
@@ -52,14 +55,17 @@ x11vnc \
   -rfbport 5900 \
   -forever \
   -shared \
-  -bg
+  >/tmp/x11vnc.log 2>&1 &
 
 # Forward termination to the turtlesim node for a clean shutdown.
-trap 'kill -TERM "${TURTLE_PID}" 2>/dev/null || true' TERM INT
-
-# Serve noVNC static assets and bridge WebSocket -> VNC on :6080 (foreground).
-exec websockify \
+# Keep websockify in the background so PID 1 can trap TERM/INT and stop both processes.
+websockify \
   --web /usr/share/novnc/ \
   --heartbeat 30 \
   6080 \
-  localhost:5900
+  localhost:5900 &
+WEBSOCKIFY_PID=$!
+
+trap 'kill -TERM "${TURTLE_PID}" "${WEBSOCKIFY_PID}" 2>/dev/null || true' TERM INT
+
+wait -n "${TURTLE_PID}" "${WEBSOCKIFY_PID}"
