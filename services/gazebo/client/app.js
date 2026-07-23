@@ -46,6 +46,7 @@
   var total = 0;
   var windowCount = 0;
   var lastFrames = [];
+  var framesDirty = false;
   var ws = null;
   var reconnectTimer = null;
 
@@ -78,7 +79,7 @@
     var label = h.op + (h.topic ? ' ' + h.topic : '') + (h.type ? ' [' + h.type + ']' : '');
     lastFrames.unshift(label);
     if (lastFrames.length > 40) lastFrames.pop();
-    framesEl.textContent = lastFrames.join('\n');
+    framesDirty = true;
   }
 
   function onOpen() {
@@ -147,6 +148,10 @@
   // Live throughput meter (messages/second), sampled once per second.
   setInterval(function () {
     rateEl.textContent = String(windowCount);
+    if (framesDirty) {
+      framesEl.textContent = lastFrames.join('\n');
+      framesDirty = false;
+    }
     windowCount = 0;
   }, 1000);
 
