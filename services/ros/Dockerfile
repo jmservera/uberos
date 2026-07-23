@@ -11,8 +11,14 @@ FROM ros:${ROS_DISTRO}-ros-base
 ARG ROS_DISTRO
 ENV ROS_DISTRO=${ROS_DISTRO}
 
-# Install colcon toolchain, rosbridge, rosapi, ros-gz integration, and utilities.
+# Install colcon toolchain, rosbridge, rosapi, and utilities.
 # procps provides pgrep; curl/wget used by tooling and health probing.
+#
+# The ros_gz bridge is NOT installed here (Theme E, FR-E6): it runs co-located
+# with `gz sim` in the gazebo container so the gz-transport hop stays
+# intra-container and only its DDS side crosses the network. This image would
+# only need `ros-gz` if a ROS-side node consumed ros_gz_interfaces, which none
+# currently do.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         python3-colcon-common-extensions \
@@ -20,7 +26,6 @@ RUN apt-get update \
         python3-vcstool \
         ros-${ROS_DISTRO}-rosbridge-suite \
         ros-${ROS_DISTRO}-rosapi \
-        ros-${ROS_DISTRO}-ros-gz \
         procps \
         tmux \
         curl \
