@@ -53,8 +53,8 @@ proxy port.
 CI acceptance slice rationale:
 
 * CI runs a stable slice that prioritizes stack health and core simulator-path checks while ongoing popout work settles
-* Temporary exclusion note: `acceptance/s5b-popout-dockback.spec.js` is excluded in CI for now due to known flakiness under headless timing variance
-* Local and targeted validation can still run S5 and S5b directly when investigating popout regressions
+* CI includes `acceptance/s5b-popout-dockback.spec.js`, but excludes the single `OS close (window.close) does NOT dock the panel back` subcase via `--grep-invert` because that path is still timing-sensitive under headless Chromium
+* Local and targeted validation can still run the full S5 and S5b specs directly when investigating popout regressions
 
 ## Criteria mapping
 

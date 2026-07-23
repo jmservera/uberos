@@ -90,12 +90,13 @@
           <p>
             This is the minimal UbeROS gzweb client: it establishes the
             WebsocketServer connection through the proxy (<code>/gzweb/ws/</code>)
-            and confirms whether live scene-state frames are flowing. Full Three.js 3D
-            rendering is a documented follow-up (see services/gazebo/client/app.js).
+            and confirms whether live scene-state frames are flowing. This PR
+            covers transport validation and panel integration; full Three.js 3D
+            rendering remains tracked follow-up work (see services/gazebo/client/app.js).
           </p>
         </div>
       </div>
-      <pre id="frames" aria-live="polite"></pre>
+      <pre id="frames"></pre>
     </div>
     <!-- Config first so app.js can read window.GZWEB_WS_URL / GZWEB_WORLD. -->
     <script src="config.js"></script>

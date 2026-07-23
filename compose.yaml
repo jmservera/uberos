@@ -208,7 +208,7 @@ services:
       UBEROS_PROJECT: ${COMPOSE_PROJECT_NAME:-uberos}
       # Services the system menu is allowed to restart (BR-007). The control
       # plane itself, the proxy, and discovery-server are intentionally excluded.
-      UBEROS_SERVICES: ${UBEROS_SERVICES:-ros,gazebo,editor,frontend}
+      UBEROS_SERVICES: ${UBEROS_SERVICES:-ros,gazebo,turtlesim,editor,frontend}
       # Surfaced to the SPA so it knows whether to show Logout (BR-008).
       UBEROS_AUTH: ${UBEROS_AUTH:-off}
       # Path to the persisted system settings store (Theme C, FR-C2). Lives on
@@ -247,7 +247,7 @@ services:
       - ./config/nginx:/etc/nginx/auth:ro
       # Self-hosted gzweb static client (Theme F, FR-F2), served by nginx at
       # /gzweb/. Mounted here (not baked into the gazebo image) so the panel
-      # shell is ALWAYS available even when the on-demand gazebo container is
+      # shell is ALWAYS available even when the default-enabled gazebo container is
       # down; only the /gzweb/ws/ upgrade returns 502 until gazebo is up.
       - ./services/gazebo/client:/usr/share/nginx/gzweb:ro
     networks:
